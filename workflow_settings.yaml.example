@@ -1,0 +1,7 @@
+# Template de configuração do Dataform para execução no BigQuery
+# Renomeie este arquivo para 'workflow_settings.yaml' e insira o ID do seu projeto no GCP.
+
+defaultProject: your-gcp-project-id
+defaultDataset: silver
+defaultLocation: US
+dataformCoreVersion: 3.0.0
