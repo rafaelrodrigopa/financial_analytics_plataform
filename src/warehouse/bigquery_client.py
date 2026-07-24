@@ -70,7 +70,10 @@ class BigQueryClient:
             write_disposition=disposition_map.get(
                 write_disposition.upper(),
                 bigquery.WriteDisposition.WRITE_TRUNCATE
-            )
+            ),
+            schema_update_options=[
+                bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION
+            ]
         )
 
         load_job = self.client.load_table_from_dataframe(

@@ -7,7 +7,14 @@ from src.warehouse.bigquery_client import BigQueryClient
 from src.core.config import settings
 
 
-DEFAULT_TOP_100_SYMBOLS = [
+DEFAULT_BATCH_24_SYMBOLS = [
+    # Top 24 Leaders (Tech, Semiconductors, Financials & Retail)
+    "MSFT", "AAPL", "GOOGL", "AMZN", "META", "ORCL", "CRM", "ADBE", "NOW", "INTU",
+    "IBM", "SAP", "ACN", "UBER", "NVDA", "AMD", "INTC", "QCOM", "JPM", "V",
+    "MA", "BAC", "WMT", "COST"
+]
+
+ALL_TOP_100_SYMBOLS = [
     # Tech & Software
     "MSFT", "AAPL", "GOOGL", "AMZN", "META", "ORCL", "CRM", "ADBE", "NOW", "INTU",
     "IBM", "SAP", "ACN", "UBER", "PANW", "SNOW", "PLTR", "SHOP", "SQ", "ABNB",
@@ -48,7 +55,7 @@ class IngestionService:
     """
 
     def __init__(self, symbols: Optional[List[str]] = None):
-        self.symbols = symbols or DEFAULT_TOP_100_SYMBOLS
+        self.symbols = symbols or DEFAULT_BATCH_24_SYMBOLS
         self.fmp = FinancialModelingPrep()
         self.bq = BigQueryClient()
 
@@ -114,14 +121,18 @@ class IngestionService:
 
     def _upload_combined(self, df_list: List[pd.DataFrame], table_id: str) -> None:
         """
-        Concatena os DataFrames de cada símbolo e faz o upload para a tabela Landing correspondente.
+        Concatena os DataFrames de cada símbolo, adiciona a coluna de auditoria ingested_at
+        e faz o upload para a tabela Landing correspondente.
         """
         if not df_list:
             print(f"Nenhum dado encontrado para a tabela '{table_id}'. Carga omitida.")
             return
 
         combined_df = pd.concat(df_list, ignore_index=True)
-        print(f"Carregando {len(combined_df)} registros na tabela 'landing.{table_id}'...")
+        # Adiciona a data/hora UTC do lote de ingestão para auditoria
+        combined_df["ingested_at"] = pd.Timestamp.now(tz="UTC")
+
+        print(f"Carregando {len(combined_df)} registros (com 'ingested_at') na tabela 'landing.{table_id}'...")
 
         self.bq.upload_dataframe(
             dataframe=combined_df,
