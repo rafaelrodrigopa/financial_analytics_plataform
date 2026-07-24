@@ -32,7 +32,7 @@ jobs:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: |
           mkdir -p credenciais
-          python -c "import os, base64, json; data=os.environ['GCP_SA_KEY'].strip(); content = base64.b64decode(data).decode('utf-8') if not data.startswith('{') else data; open('credenciais/chave_conta_servico.json', 'w').write(content); print('Validação JSON OK, Project:', json.loads(content).get('project_id'))"
+          python -c "import os, base64, json, ast; raw=os.environ.get('GCP_SA_KEY','').strip(); data=None; [exec('try:\n data=base64.b64decode(raw).decode(\"utf-8\")\nexcept:\n try:\n  data=json.loads(raw)\n except:\n  data=json.dumps(ast.literal_eval(raw))\n')]; content = data if isinstance(data, str) else json.dumps(data, indent=2); open('credenciais/chave_conta_servico.json', 'w').write(content); print('Credencial GCP configurada com sucesso! Projeto:', json.loads(content).get('project_id'))"
 
       - name: Execute Daily Ingestion Pipeline
         env:
