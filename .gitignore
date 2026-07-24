@@ -15,6 +15,9 @@ specs/
 !docs/
 !docs/*.md
 
+# CI/CD Workflows
+.github/
+
 # Python Cache & Artifacts
 __pycache__/
 *.pyc
