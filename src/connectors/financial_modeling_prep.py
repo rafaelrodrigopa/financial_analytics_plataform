@@ -5,6 +5,8 @@ import requests
 import pandas as pd
 
 from src.core.config import settings
+from src.core.logger import logger
+from src.core.exceptions import FMPAPIError, RateLimitExceededError
 
 
 class FinancialModelingPrep:
@@ -18,9 +20,7 @@ class FinancialModelingPrep:
         self.base_url = (base_url or settings.FMP_BASE_URL).rstrip("/")
 
         if not self.api_key or self.api_key == "sua_chave_api_fmp_aqui":
-            raise ValueError(
-                "FMP_API_KEY não configurada. Defina a variável no arquivo .env ou passe a chave no construtor."
-            )
+            raise FMPAPIError("FMP_API_KEY não configurada. Defina a variável no .env ou passe no construtor.")
 
     def _fetch(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
         """
@@ -39,17 +39,24 @@ class FinancialModelingPrep:
 
             if response.status_code == 429:
                 if attempt < max_retries - 1:
+                    logger.warning(f"Rate Limit 429 em {endpoint}. Aguardando {backoff_seconds}s (Tentativa {attempt + 1}/{max_retries})...")
                     time.sleep(backoff_seconds)
                     backoff_seconds *= 2
                     continue
+                else:
+                    raise RateLimitExceededError(endpoint=endpoint)
 
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except requests.exceptions.HTTPError as e:
+                raise FMPAPIError(message=str(e), status_code=response.status_code, endpoint=endpoint)
+
             data = response.json()
             break
 
         if isinstance(data, dict) and ("Error Message" in data or "error" in data):
             error_msg = data.get("Error Message") or data.get("error")
-            raise ValueError(f"Erro na API FMP ({endpoint}): {error_msg}")
+            raise FMPAPIError(message=error_msg, endpoint=endpoint)
 
         if not data:
             return pd.DataFrame()

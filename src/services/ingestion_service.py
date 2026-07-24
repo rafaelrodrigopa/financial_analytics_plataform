@@ -5,6 +5,7 @@ import pandas as pd
 from src.connectors import FinancialModelingPrep
 from src.warehouse.bigquery_client import BigQueryClient
 from src.core.config import settings
+from src.core.logger import logger
 
 
 DEFAULT_BATCH_24_SYMBOLS = [
@@ -65,7 +66,7 @@ class IngestionService:
         dados combinados para o dataset Landing no BigQuery.
         """
         total_symbols = len(self.symbols)
-        print(f"Iniciando ingestão de {total_symbols} empresas para a camada Landing (Dataset: '{settings.LANDING}')")
+        logger.info(f"Iniciando ingestão de {total_symbols} empresas para a camada Landing (Dataset: '{settings.LANDING}')")
 
         quotes_list = []
         profiles_list = []
@@ -74,7 +75,7 @@ class IngestionService:
         cash_flows_list = []
 
         for idx, symbol in enumerate(self.symbols, 1):
-            print(f"[{idx}/{total_symbols}] Extraindo dados para {symbol}...")
+            logger.info(f"[{idx}/{total_symbols}] Extraindo dados para {symbol}...")
             try:
                 # Quote
                 df_q = self.fmp.get_quote(symbol)
@@ -105,19 +106,17 @@ class IngestionService:
                 time.sleep(0.15)
 
             except Exception as e:
-                print(f"  [Aviso] Erro ao extrair dados para {symbol}: {e}")
+                logger.warning(f"Erro ao extrair dados para {symbol}: {e}")
 
         # Combina os DataFrames de todos os símbolos e faz o upload para o BigQuery
-        print("\n==================================================")
-        print("Iniciando Upload Combinado para a Camada Landing do BigQuery...")
-        print("==================================================")
+        logger.info("Iniciando Upload Combinado para a Camada Landing do BigQuery...")
         self._upload_combined(quotes_list, "quote")
         self._upload_combined(profiles_list, "company_profile")
         self._upload_combined(incomes_list, "income_statement")
         self._upload_combined(balances_list, "balance_sheet")
         self._upload_combined(cash_flows_list, "cash_flow")
 
-        print("\nProcesso de ingestão para a camada Landing finalizado com sucesso!")
+        logger.info("Processo de ingestão para a camada Landing finalizado com sucesso!")
 
     def _upload_combined(self, df_list: List[pd.DataFrame], table_id: str) -> None:
         """
@@ -125,14 +124,14 @@ class IngestionService:
         e faz o upload para a tabela Landing correspondente.
         """
         if not df_list:
-            print(f"Nenhum dado encontrado para a tabela '{table_id}'. Carga omitida.")
+            logger.warning(f"Nenhum dado encontrado para a tabela '{table_id}'. Carga omitida.")
             return
 
         combined_df = pd.concat(df_list, ignore_index=True)
         # Adiciona a data/hora UTC do lote de ingestão para auditoria
         combined_df["ingested_at"] = pd.Timestamp.now(tz="UTC")
 
-        print(f"Carregando {len(combined_df)} registros (com 'ingested_at') na tabela 'landing.{table_id}'...")
+        logger.info(f"Carregando {len(combined_df)} registros (com 'ingested_at') na tabela 'landing.{table_id}'...")
 
         self.bq.upload_dataframe(
             dataframe=combined_df,

@@ -4,6 +4,8 @@ from google.cloud.exceptions import NotFound
 import pandas as pd
 
 from src.core.config import settings
+from src.core.logger import logger
+from src.core.exceptions import BigQueryUploadError
 
 
 class BigQueryClient:
@@ -33,7 +35,7 @@ class BigQueryClient:
             dataset = bigquery.Dataset(dataset_ref)
             dataset.location = location
             self.client.create_dataset(dataset, timeout=30)
-            print(f"Dataset '{dataset_ref}' criado com sucesso.")
+            logger.info(f"Dataset '{dataset_ref}' criado com sucesso.")
 
     def upload_dataframe(
         self,
@@ -52,7 +54,7 @@ class BigQueryClient:
             write_disposition (str): Comportamento de escrita ('WRITE_TRUNCATE' ou 'WRITE_APPEND').
         """
         if dataframe is None or dataframe.empty:
-            print(f"Aviso: DataFrame para '{dataset_id}.{table_id}' está vazio ou Nulo. Carga omitida.")
+            logger.warning(f"DataFrame para '{dataset_id}.{table_id}' está vazio ou Nulo. Carga omitida.")
             return
 
         # Garante que o dataset existe antes da carga
@@ -76,12 +78,16 @@ class BigQueryClient:
             ]
         )
 
-        load_job = self.client.load_table_from_dataframe(
-            dataframe,
-            table_ref,
-            job_config=job_config
-        )
-        load_job.result()  # Aguarda a conclusão do job de carga
+        try:
+            load_job = self.client.load_table_from_dataframe(
+                dataframe,
+                table_ref,
+                job_config=job_config
+            )
+            load_job.result()  # Aguarda a conclusão do job de carga
 
-        destination_table = self.client.get_table(table_ref)
-        print(f"Carga concluída para '{table_ref}'. Total de linhas na tabela: {destination_table.num_rows}")
+            destination_table = self.client.get_table(table_ref)
+            logger.info(f"Carga concluída para '{table_ref}'. Total de linhas na tabela: {destination_table.num_rows}")
+        except Exception as e:
+            logger.error(f"Falha no upload para BigQuery '{table_ref}': {e}")
+            raise BigQueryUploadError(message=str(e), table_ref=table_ref)

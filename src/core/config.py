@@ -17,5 +17,6 @@ class Settings:
     FMP_PROFILE_ENDPOINT = os.getenv("FMP_PROFILE_ENDPOINT", "/profile")
     FMP_QUOTE_ENDPOINT = os.getenv("FMP_QUOTE_ENDPOINT", "/quote")
     DEFAULT_SYMBOL = os.getenv("DEFAULT_SYMBOL", "MSFT")
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 settings = Settings()
