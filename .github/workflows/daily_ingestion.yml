@@ -28,11 +28,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Setup GCP Service Account Credentials
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: |
           mkdir -p credenciais
-          cat << 'EOF' > credenciais/chave_conta_servico.json
-          ${{ secrets.GCP_SA_KEY }}
-          EOF
+          python -c "import os, json; key=os.environ['GCP_SA_KEY']; open('credenciais/chave_conta_servico.json', 'w').write(key.strip()); print('Validação JSON:', json.loads(open('credenciais/chave_conta_servico.json').read()).get('type'))"
 
       - name: Execute Daily Ingestion Pipeline
         env:
