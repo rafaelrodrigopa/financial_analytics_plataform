@@ -12,6 +12,8 @@ credenciais/
 # Internal Documentation & Specs
 documentacao.md
 specs/
+!docs/
+!docs/*.md
 
 # Python Cache & Artifacts
 __pycache__/
