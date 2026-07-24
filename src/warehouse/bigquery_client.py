@@ -1,4 +1,3 @@
-
 import pandas as pd
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
@@ -37,16 +36,24 @@ class BigQueryClient:
             logger.info(f"Dataset '{dataset_ref}' criado com sucesso.")
 
     def upload_dataframe(
-        self, dataframe: pd.DataFrame, dataset_id: str, table_id: str, write_disposition: str = "WRITE_TRUNCATE"
+        self,
+        dataframe: pd.DataFrame,
+        dataset_id: str,
+        table_id: str,
+        write_disposition: str = "WRITE_TRUNCATE",
+        time_partitioning: bigquery.TimePartitioning | None = None,
+        clustering_fields: list[str] | None = None,
     ) -> None:
         """
         Carrega um DataFrame do Pandas para uma tabela no BigQuery.
 
         Args:
             dataframe (pd.DataFrame): Dados a serem carregados.
-            dataset_id (str): Nome do dataset destino (ex: 'landing').
+            dataset_id (str): Nome do dataset destino (ex: 'landing', 'bronze').
             table_id (str): Nome da tabela destino (ex: 'income_statement').
             write_disposition (str): Comportamento de escrita ('WRITE_TRUNCATE' ou 'WRITE_APPEND').
+            time_partitioning (bigquery.TimePartitioning | None): Configuração de particionamento por tempo.
+            clustering_fields (list[str] | None): Lista de campos para clusterização.
         """
         if dataframe is None or dataframe.empty:
             logger.warning(f"DataFrame para '{dataset_id}.{table_id}' está vazio ou Nulo. Carga omitida.")
@@ -67,6 +74,11 @@ class BigQueryClient:
             write_disposition=disposition_map.get(write_disposition.upper(), bigquery.WriteDisposition.WRITE_TRUNCATE),
             schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
         )
+
+        if time_partitioning:
+            job_config.time_partitioning = time_partitioning
+        if clustering_fields:
+            job_config.clustering_fields = clustering_fields
 
         try:
             load_job = self.client.load_table_from_dataframe(dataframe, table_ref, job_config=job_config)

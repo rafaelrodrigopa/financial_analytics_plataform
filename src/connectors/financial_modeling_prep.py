@@ -71,9 +71,7 @@ class FinancialModelingPrep:
 
         return df
 
-    def get_income_statement(
-        self, symbol: str | None = None, limit: int = 100, period: str = "annual"
-    ) -> pd.DataFrame:
+    def get_income_statement(self, symbol: str | None = None, limit: int = 100, period: str = "annual") -> pd.DataFrame:
         """
         Extrai a DRE / Demonstrativo de Resultado (Income Statement).
         """
