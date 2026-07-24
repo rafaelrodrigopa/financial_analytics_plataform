@@ -1,11 +1,10 @@
-from typing import Optional
+
+import pandas as pd
 from google.cloud import bigquery
 from google.cloud.exceptions import NotFound
-import pandas as pd
-
 from src.core.config import settings
-from src.core.logger import logger
 from src.core.exceptions import BigQueryUploadError
+from src.core.logger import logger
 
 
 class BigQueryClient:
@@ -14,7 +13,7 @@ class BigQueryClient:
     e carga de DataFrames nas camadas de dados (Landing, Bronze, Silver, Gold).
     """
 
-    def __init__(self, project_id: Optional[str] = None):
+    def __init__(self, project_id: str | None = None):
         self.project_id = project_id or settings.PROJECT_ID
         self.client = bigquery.Client(project=self.project_id)
 
@@ -38,11 +37,7 @@ class BigQueryClient:
             logger.info(f"Dataset '{dataset_ref}' criado com sucesso.")
 
     def upload_dataframe(
-        self,
-        dataframe: pd.DataFrame,
-        dataset_id: str,
-        table_id: str,
-        write_disposition: str = "WRITE_TRUNCATE"
+        self, dataframe: pd.DataFrame, dataset_id: str, table_id: str, write_disposition: str = "WRITE_TRUNCATE"
     ) -> None:
         """
         Carrega um DataFrame do Pandas para uma tabela no BigQuery.
@@ -65,25 +60,16 @@ class BigQueryClient:
         disposition_map = {
             "WRITE_TRUNCATE": bigquery.WriteDisposition.WRITE_TRUNCATE,
             "WRITE_APPEND": bigquery.WriteDisposition.WRITE_APPEND,
-            "WRITE_EMPTY": bigquery.WriteDisposition.WRITE_EMPTY
+            "WRITE_EMPTY": bigquery.WriteDisposition.WRITE_EMPTY,
         }
 
         job_config = bigquery.LoadJobConfig(
-            write_disposition=disposition_map.get(
-                write_disposition.upper(),
-                bigquery.WriteDisposition.WRITE_TRUNCATE
-            ),
-            schema_update_options=[
-                bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION
-            ]
+            write_disposition=disposition_map.get(write_disposition.upper(), bigquery.WriteDisposition.WRITE_TRUNCATE),
+            schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
         )
 
         try:
-            load_job = self.client.load_table_from_dataframe(
-                dataframe,
-                table_ref,
-                job_config=job_config
-            )
+            load_job = self.client.load_table_from_dataframe(dataframe, table_ref, job_config=job_config)
             load_job.result()  # Aguarda a conclusão do job de carga
 
             destination_table = self.client.get_table(table_ref)

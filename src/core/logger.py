@@ -1,12 +1,11 @@
 import logging
 import os
 import sys
-from typing import Optional
 
 from src.core.config import settings
 
 
-def get_logger(name: Optional[str] = "financial_platform") -> logging.Logger:
+def get_logger(name: str | None = "financial_platform") -> logging.Logger:
     """
     Retorna uma instância configurada do Logger padronizado para o projeto.
     Integra-se automaticamente ao Google Cloud Logging se disponível e ativo,
@@ -24,8 +23,7 @@ def get_logger(name: Optional[str] = "financial_platform") -> logging.Logger:
 
     # Formato padronizado de log (Compatível com Cloud Logging)
     formatter = logging.Formatter(
-        fmt="%(asctime)s [%(levelname)s] [%(name)s]: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        fmt="%(asctime)s [%(levelname)s] [%(name)s]: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
     # Handler para Console (stdout)

@@ -1,5 +1,5 @@
-import sys
 import os
+import sys
 
 # Adiciona o diretório raiz do projeto ao sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -41,14 +41,20 @@ def test_fmp_connector():
     df_balance = fmp.get_balance_sheet(limit=2)
     assert not df_balance.empty, "DataFrame de Balance Sheet não deve estar vazio"
     print(f"Balance Sheet retornado ({len(df_balance)} linhas):")
-    cols_balance = [c for c in ["date", "symbol", "totalAssets", "totalLiabilities", "totalStockholdersEquity"] if c in df_balance.columns]
+    cols_balance = [
+        c
+        for c in ["date", "symbol", "totalAssets", "totalLiabilities", "totalStockholdersEquity"]
+        if c in df_balance.columns
+    ]
     print(df_balance[cols_balance if cols_balance else df_balance.columns[:5]].to_string(index=False))
 
     print("\n--- Testando Cash Flow ---")
     df_cash = fmp.get_cash_flow(limit=2)
     assert not df_cash.empty, "DataFrame de Cash Flow não deve estar vazio"
     print(f"Cash Flow retornado ({len(df_cash)} linhas):")
-    cols_cash = [c for c in ["date", "symbol", "netIncome", "operatingCashFlow", "freeCashFlow"] if c in df_cash.columns]
+    cols_cash = [
+        c for c in ["date", "symbol", "netIncome", "operatingCashFlow", "freeCashFlow"] if c in df_cash.columns
+    ]
     print(df_cash[cols_cash if cols_cash else df_cash.columns[:5]].to_string(index=False))
 
     print("\nTodos os métodos do conector FMP funcionaram com sucesso!")

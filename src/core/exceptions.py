@@ -2,6 +2,7 @@ class FinancialPlatformError(Exception):
     """
     Exceção base para todos os erros customizados da plataforma financeira.
     """
+
     pass
 
 
@@ -25,9 +26,7 @@ class RateLimitExceededError(FMPAPIError):
 
     def __init__(self, endpoint: str = None):
         super().__init__(
-            message="Limite de requisições excedido. Cota diária/minuto atingida.",
-            status_code=429,
-            endpoint=endpoint
+            message="Limite de requisições excedido. Cota diária/minuto atingida.", status_code=429, endpoint=endpoint
         )
 
 

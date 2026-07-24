@@ -1,7 +1,9 @@
-from dotenv import load_dotenv
 import os
 
+from dotenv import load_dotenv
+
 load_dotenv()
+
 
 class Settings:
     PROJECT_ID = os.getenv("GCP_PROJECT_ID")
@@ -18,5 +20,6 @@ class Settings:
     FMP_QUOTE_ENDPOINT = os.getenv("FMP_QUOTE_ENDPOINT", "/quote")
     DEFAULT_SYMBOL = os.getenv("DEFAULT_SYMBOL", "MSFT")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+
 
 settings = Settings()

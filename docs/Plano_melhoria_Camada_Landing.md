@@ -40,10 +40,9 @@ Para elevar o nível da solução de um protótipo avançado para um **Pipeline 
 - **Status**: Implementado em `src/schemas/financial_schemas.py` e integrado ao `IngestionService`.
 - **Benefício**: Garante que colunas críticas (como `symbol`, `date`, `revenue`) nunca cheguem nulas ou com tipos divergentes do contrato esperado antes do upload no BigQuery.
 
-### 2.4. Qualidade e Padronização de Código (Linting & Formatting)
-- **Situação Atual**: Formatação manual do código Python.
-- **Melhoria Proposta**: Adicionar ferramentas automatizadas de análise estática e formatação (ex: **Ruff**, **Black**, **Flake8**).
-- **Benefício**: Garantia de aderência aos padrões de código PEP-8 e prevenção de erros comuns antes do commit.
+### 2.4. Qualidade e Padronização de Código (Ruff Linter & Formatter) - 🟢 Concluído
+- **Status**: Configurado em `pyproject.toml` usando **Ruff** (substituindo Flake8, Black e isort em velocidade extrema).
+- **Resultado**: 53 correções automáticas de padronização PEP-8 aplicadas em 100% da base de código com verificação `All checks passed!`.
 
 ---
 

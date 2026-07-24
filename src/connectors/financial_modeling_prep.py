@@ -1,12 +1,11 @@
-import os
 import time
-from typing import Optional, Dict, Any
-import requests
-import pandas as pd
+from typing import Any
 
+import pandas as pd
+import requests
 from src.core.config import settings
-from src.core.logger import logger
 from src.core.exceptions import FMPAPIError, RateLimitExceededError
+from src.core.logger import logger
 
 
 class FinancialModelingPrep:
@@ -15,14 +14,14 @@ class FinancialModelingPrep:
     Extrai demonstrações financeiras e dados de mercado e os retorna em DataFrames do Pandas.
     """
 
-    def __init__(self, api_key: Optional[str] = None, base_url: Optional[str] = None):
+    def __init__(self, api_key: str | None = None, base_url: str | None = None):
         self.api_key = api_key or settings.FMP_API_KEY
         self.base_url = (base_url or settings.FMP_BASE_URL).rstrip("/")
 
         if not self.api_key or self.api_key == "sua_chave_api_fmp_aqui":
             raise FMPAPIError("FMP_API_KEY não configurada. Defina a variável no .env ou passe no construtor.")
 
-    def _fetch(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
+    def _fetch(self, endpoint: str, params: dict[str, Any] | None = None) -> pd.DataFrame:
         """
         Método auxiliar interno para realizar requisições HTTP GET na API FMP e retornar um DataFrame.
         Inclui mecânica de retry automática em caso de erro 429 (Rate Limit / Too Many Requests).
@@ -39,7 +38,9 @@ class FinancialModelingPrep:
 
             if response.status_code == 429:
                 if attempt < max_retries - 1:
-                    logger.warning(f"Rate Limit 429 em {endpoint}. Aguardando {backoff_seconds}s (Tentativa {attempt + 1}/{max_retries})...")
+                    logger.warning(
+                        f"Rate Limit 429 em {endpoint}. Aguardando {backoff_seconds}s (Tentativa {attempt + 1}/{max_retries})..."
+                    )
                     time.sleep(backoff_seconds)
                     backoff_seconds *= 2
                     continue
@@ -71,10 +72,7 @@ class FinancialModelingPrep:
         return df
 
     def get_income_statement(
-        self,
-        symbol: Optional[str] = None,
-        limit: int = 100,
-        period: str = "annual"
+        self, symbol: str | None = None, limit: int = 100, period: str = "annual"
     ) -> pd.DataFrame:
         """
         Extrai a DRE / Demonstrativo de Resultado (Income Statement).
@@ -88,12 +86,7 @@ class FinancialModelingPrep:
             df["symbol"] = symbol
         return df
 
-    def get_balance_sheet(
-        self,
-        symbol: Optional[str] = None,
-        limit: int = 100,
-        period: str = "annual"
-    ) -> pd.DataFrame:
+    def get_balance_sheet(self, symbol: str | None = None, limit: int = 100, period: str = "annual") -> pd.DataFrame:
         """
         Extrai o Balanço Patrimonial (Balance Sheet Statement).
         """
@@ -106,12 +99,7 @@ class FinancialModelingPrep:
             df["symbol"] = symbol
         return df
 
-    def get_cash_flow(
-        self,
-        symbol: Optional[str] = None,
-        limit: int = 100,
-        period: str = "annual"
-    ) -> pd.DataFrame:
+    def get_cash_flow(self, symbol: str | None = None, limit: int = 100, period: str = "annual") -> pd.DataFrame:
         """
         Extrai a Demonstração dos Fluxos de Caixa (Cash Flow Statement).
         """
@@ -124,7 +112,7 @@ class FinancialModelingPrep:
             df["symbol"] = symbol
         return df
 
-    def get_company_profile(self, symbol: Optional[str] = None) -> pd.DataFrame:
+    def get_company_profile(self, symbol: str | None = None) -> pd.DataFrame:
         """
         Extrai o perfil e dados cadastrais da empresa (Company Profile).
         """
@@ -137,7 +125,7 @@ class FinancialModelingPrep:
             df["symbol"] = symbol
         return df
 
-    def get_quote(self, symbol: Optional[str] = None) -> pd.DataFrame:
+    def get_quote(self, symbol: str | None = None) -> pd.DataFrame:
         """
         Extrai cotação / dados de mercado em tempo real (Quote).
         """

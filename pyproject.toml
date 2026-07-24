@@ -1,0 +1,20 @@
+[tool.ruff]
+# Versão alvo do Python
+target-version = "py312"
+
+# Limite máximo de comprimento de linha (PEP-8 Standard Enterprise)
+line-length = 120
+
+# Pastas consideradas fontes do projeto
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Habilita regras de Pyflakes (F), pycodestyle (E, W), isort (I - importação ordenada) e pyupgrade (UP)
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]  # Comprimento de linha gerenciado pelo formatador
+
+[tool.ruff.format]
+# Aspas duplas padronizadas
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false

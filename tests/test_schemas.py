@@ -1,5 +1,6 @@
 import os
 import sys
+
 import pandas as pd
 
 # Adiciona a raiz do projeto ao sys.path
