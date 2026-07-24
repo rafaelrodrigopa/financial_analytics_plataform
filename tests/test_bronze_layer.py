@@ -47,16 +47,18 @@ class TestBronzeServiceUnit(unittest.TestCase):
         call_kwargs = self.mock_bq_client.upload_dataframe.call_args.kwargs
         uploaded_df = call_kwargs["dataframe"]
 
-        # Validações dos campos de auditoria e hash
+        # Validações dos campos de auditoria, hash e payload bruto
         self.assertIn("_ingested_at", uploaded_df.columns)
         self.assertIn("_source", uploaded_df.columns)
         self.assertIn("_execution_id", uploaded_df.columns)
         self.assertIn("_row_hash", uploaded_df.columns)
+        self.assertIn("_raw_payload", uploaded_df.columns)
 
         self.assertEqual(uploaded_df["_source"].iloc[0], "unit_test")
         self.assertEqual(uploaded_df["_execution_id"].iloc[0], custom_exec_id)
         self.assertTrue(uploaded_df["_row_hash"].notnull().all())
         self.assertEqual(len(uploaded_df["_row_hash"].iloc[0]), 32)  # Comprimento MD5 hex
+        self.assertTrue(uploaded_df["_raw_payload"].notnull().all())
 
         # Validação do modo de escrita (WRITE_APPEND)
         self.assertEqual(call_kwargs["write_disposition"], "WRITE_APPEND")

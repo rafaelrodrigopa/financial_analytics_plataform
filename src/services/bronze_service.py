@@ -55,10 +55,13 @@ class BronzeService:
         df["_source"] = source
         df["_execution_id"] = exec_id
 
-        # Cálculo da Hash Criptográfica (_row_hash) do payload bruto
-        payload_cols = [c for c in df.columns if c not in ["_ingested_at", "_source", "_execution_id", "_row_hash"]]
+        # Cálculo da Hash Criptográfica (_row_hash) e Preservação Semiestruturada (_raw_payload) do payload bruto
+        payload_cols = [
+            c for c in df.columns if c not in ["_ingested_at", "_source", "_execution_id", "_row_hash", "_raw_payload"]
+        ]
         row_strings = df[payload_cols].astype(str).agg("|".join, axis=1)
         df["_row_hash"] = row_strings.apply(lambda s: hashlib.md5(s.encode("utf-8")).hexdigest())
+        df["_raw_payload"] = df[payload_cols].apply(lambda r: r.to_json(), axis=1)
 
         # Configuração de Particionamento Diário por _ingested_at
         time_partitioning = bigquery.TimePartitioning(
@@ -222,13 +225,14 @@ class BronzeService:
                     CURRENT_TIMESTAMP() AS _ingested_at,
                     CAST('' AS STRING) AS _source,
                     CAST('' AS STRING) AS _execution_id,
-                    CAST('' AS STRING) AS _row_hash
-                FROM {landing_table_ref}
+                    CAST('' AS STRING) AS _row_hash,
+                    TO_JSON(t) AS _raw_payload
+                FROM {landing_table_ref} t
                 WHERE 1=0;
                 """
                 self.bq.client.query(create_ddl).result()
 
-                # 2. Promove os dados diretamente via SQL INSERT INTO ... SELECT ... com cálculo de _row_hash
+                # 2. Promove os dados diretamente via SQL com _row_hash e preservação semiestruturada _raw_payload
                 insert_sql = f"""
                 INSERT INTO {bronze_table_ref}
                 SELECT
@@ -236,7 +240,8 @@ class BronzeService:
                     CURRENT_TIMESTAMP() AS _ingested_at,
                     @source AS _source,
                     @execution_id AS _execution_id,
-                    TO_HEX(MD5(TO_JSON_STRING(t))) AS _row_hash
+                    TO_HEX(MD5(TO_JSON_STRING(t))) AS _row_hash,
+                    TO_JSON(t) AS _raw_payload
                 FROM {landing_table_ref} t;
                 """
 
