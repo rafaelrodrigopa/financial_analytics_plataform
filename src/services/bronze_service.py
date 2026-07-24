@@ -82,3 +82,49 @@ class BronzeService:
         )
 
         logger.info(f"Carga na camada Bronze para '{self.dataset_id}.{table_id}' concluída com sucesso.")
+
+    def process_landing_to_bronze(
+        self,
+        tables: list[str] | None = None,
+        source: str = "landing_zone",
+        execution_id: str | None = None,
+    ) -> None:
+        """
+        Lê todas as tabelas (ou tabelas específicas) da camada Landing, adiciona os campos
+        auditáveis (_ingested_at, _source, _execution_id) e as persiste na camada Bronze
+        com particionamento diário e clusterização por symbol.
+
+        Args:
+            tables (list[str] | None): Lista de nomes das tabelas em Landing a processar.
+            source (str): Origem para os campos auditáveis.
+            execution_id (str | None): Identificador de execução único.
+        """
+        if tables is None:
+            tables = ["balance_sheet", "cash_flow", "company_profile", "income_statement", "quote"]
+
+        exec_id = execution_id or str(uuid.uuid4())
+        logger.info(f"Iniciando promoção de {len(tables)} tabelas de Landing -> Bronze [Execution ID: {exec_id}]")
+
+        for table_id in tables:
+            try:
+                table_ref = f"{self.bq.project_id}.{settings.LANDING}.{table_id}"
+                query = f"SELECT * FROM `{table_ref}`"
+                df_landing = self.bq.client.query(query).to_dataframe()
+
+                if df_landing.empty:
+                    logger.warning(f"Tabela 'landing.{table_id}' está vazia. Promoção para Bronze omitida.")
+                    continue
+
+                bronze_table_id = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
+
+                logger.info(
+                    f"Carregando {len(df_landing)} registros de 'landing.{table_id}' para 'bronze.{bronze_table_id}'..."
+                )
+                self.load_dataframe_to_bronze(
+                    dataframe=df_landing,
+                    table_id=bronze_table_id,
+                    source=source,
+                    execution_id=exec_id,
+                )
+            except Exception as e:
+                logger.error(f"Erro ao processar tabela 'landing.{table_id}' para a camada Bronze: {e}")
