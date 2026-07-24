@@ -30,7 +30,9 @@ jobs:
       - name: Setup GCP Service Account Credentials
         run: |
           mkdir -p credenciais
-          echo "${{ secrets.GCP_SA_KEY }}" > credenciais/chave_conta_servico.json
+          cat << 'EOF' > credenciais/chave_conta_servico.json
+          ${{ secrets.GCP_SA_KEY }}
+          EOF
 
       - name: Execute Daily Ingestion Pipeline
         env:
