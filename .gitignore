@@ -1,5 +1,23 @@
+# Virtual environments
 .venv/
+venv/
+ENV/
+env/
+
+# Environment & Credentials
+.env
+credenciais/
+*.json
+
+# Internal Documentation & Specs
+documentacao.md
+specs/
+
+# Python Cache & Artifacts
 __pycache__/
 *.pyc
-.env
-*.json
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
