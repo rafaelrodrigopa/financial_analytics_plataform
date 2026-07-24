@@ -70,10 +70,14 @@ class BigQueryClient:
             "WRITE_EMPTY": bigquery.WriteDisposition.WRITE_EMPTY,
         }
 
+        disposition = disposition_map.get(write_disposition.upper(), bigquery.WriteDisposition.WRITE_TRUNCATE)
+
         job_config = bigquery.LoadJobConfig(
-            write_disposition=disposition_map.get(write_disposition.upper(), bigquery.WriteDisposition.WRITE_TRUNCATE),
-            schema_update_options=[bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION],
+            write_disposition=disposition,
         )
+
+        if disposition == bigquery.WriteDisposition.WRITE_APPEND:
+            job_config.schema_update_options = [bigquery.SchemaUpdateOption.ALLOW_FIELD_ADDITION]
 
         if time_partitioning:
             job_config.time_partitioning = time_partitioning

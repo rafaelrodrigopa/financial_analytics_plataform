@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 
 import pandas as pd
@@ -13,7 +14,7 @@ class BronzeService:
     da arquitetura Medallion no Google BigQuery.
 
     Garante:
-    - Adição dos campos de auditoria (_ingested_at, _source, _execution_id).
+    - Adição dos campos de auditoria (_ingested_at, _source, _execution_id, _row_hash).
     - Particionamento nativo por data de ingestão (_ingested_at).
     - Clusterização por chaves de negócio (ex: symbol).
     - Carga append-only (WRITE_APPEND) idempotente em lote.
@@ -32,8 +33,8 @@ class BronzeService:
         clustering_fields: list[str] | None = None,
     ) -> None:
         """
-        Adiciona metadados de auditoria ao DataFrame e realiza a carga em lote (append-only)
-        com particionamento por _ingested_at e clusterização na camada Bronze.
+        Adiciona metadados de auditoria e a hash criptográfica _row_hash ao DataFrame,
+        realizando a carga em lote (append-only) com particionamento por _ingested_at na Bronze.
 
         Args:
             dataframe (pd.DataFrame): Dados brutos a serem persistidos na Bronze.
@@ -53,6 +54,11 @@ class BronzeService:
         df["_ingested_at"] = pd.Timestamp.now(tz="UTC")
         df["_source"] = source
         df["_execution_id"] = exec_id
+
+        # Cálculo da Hash Criptográfica (_row_hash) do payload bruto
+        payload_cols = [c for c in df.columns if c not in ["_ingested_at", "_source", "_execution_id", "_row_hash"]]
+        row_strings = df[payload_cols].astype(str).agg("|".join, axis=1)
+        df["_row_hash"] = row_strings.apply(lambda s: hashlib.md5(s.encode("utf-8")).hexdigest())
 
         # Configuração de Particionamento Diário por _ingested_at
         time_partitioning = bigquery.TimePartitioning(
@@ -215,22 +221,25 @@ class BronzeService:
                     *,
                     CURRENT_TIMESTAMP() AS _ingested_at,
                     CAST('' AS STRING) AS _source,
-                    CAST('' AS STRING) AS _execution_id
+                    CAST('' AS STRING) AS _execution_id,
+                    CAST('' AS STRING) AS _row_hash
                 FROM {landing_table_ref}
                 WHERE 1=0;
                 """
                 self.bq.client.query(create_ddl).result()
 
-                # 2. Promove os dados diretamente via SQL INSERT INTO ... SELECT ...
+                # 2. Promove os dados diretamente via SQL INSERT INTO ... SELECT ... com cálculo de _row_hash
                 insert_sql = f"""
                 INSERT INTO {bronze_table_ref}
                 SELECT
                     *,
                     CURRENT_TIMESTAMP() AS _ingested_at,
                     @source AS _source,
-                    @execution_id AS _execution_id
-                FROM {landing_table_ref};
+                    @execution_id AS _execution_id,
+                    TO_HEX(MD5(TO_JSON_STRING(t))) AS _row_hash
+                FROM {landing_table_ref} t;
                 """
+
                 job_config = bigquery.QueryJobConfig(
                     query_parameters=[
                         bigquery.ScalarQueryParameter("source", "STRING", source),
