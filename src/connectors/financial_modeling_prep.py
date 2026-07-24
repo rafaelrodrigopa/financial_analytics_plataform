@@ -1,4 +1,5 @@
 import os
+import time
 from typing import Optional, Dict, Any
 import requests
 import pandas as pd
@@ -24,15 +25,27 @@ class FinancialModelingPrep:
     def _fetch(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> pd.DataFrame:
         """
         Método auxiliar interno para realizar requisições HTTP GET na API FMP e retornar um DataFrame.
+        Inclui mecânica de retry automática em caso de erro 429 (Rate Limit / Too Many Requests).
         """
         params = params or {}
         params["apikey"] = self.api_key
 
         url = f"{self.base_url}{endpoint}"
-        response = requests.get(url, params=params, timeout=30)
-        response.raise_for_status()
+        max_retries = 4
+        backoff_seconds = 1.5
 
-        data = response.json()
+        for attempt in range(max_retries):
+            response = requests.get(url, params=params, timeout=30)
+
+            if response.status_code == 429:
+                if attempt < max_retries - 1:
+                    time.sleep(backoff_seconds)
+                    backoff_seconds *= 2
+                    continue
+
+            response.raise_for_status()
+            data = response.json()
+            break
 
         if isinstance(data, dict) and ("Error Message" in data or "error" in data):
             error_msg = data.get("Error Message") or data.get("error")
