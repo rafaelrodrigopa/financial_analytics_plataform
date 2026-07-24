@@ -32,7 +32,7 @@ jobs:
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         run: |
           mkdir -p credenciais
-          python -c "import os, json; key=os.environ['GCP_SA_KEY']; open('credenciais/chave_conta_servico.json', 'w').write(key.strip()); print('Validação JSON:', json.loads(open('credenciais/chave_conta_servico.json').read()).get('type'))"
+          python -c "import os, base64, json; data=os.environ['GCP_SA_KEY'].strip(); content = base64.b64decode(data).decode('utf-8') if not data.startswith('{') else data; open('credenciais/chave_conta_servico.json', 'w').write(content); print('Validação JSON OK, Project:', json.loads(content).get('project_id'))"
 
       - name: Execute Daily Ingestion Pipeline
         env:
