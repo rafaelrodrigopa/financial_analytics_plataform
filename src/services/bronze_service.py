@@ -83,6 +83,69 @@ class BronzeService:
 
         logger.info(f"Carga na camada Bronze para '{self.dataset_id}.{table_id}' concluída com sucesso.")
 
+    def log_execution_metric(
+        self,
+        execution_id: str,
+        table_name: str,
+        rows_read: int,
+        rows_written: int,
+        started_at: pd.Timestamp,
+        ended_at: pd.Timestamp,
+        status: str = "SUCCESS",
+        error_message: str | None = None,
+    ) -> None:
+        """
+        Registra estatísticas sintéticas de execução de pipeline na tabela de auditoria
+        bronze._pipeline_execution_logs no BigQuery.
+
+        Args:
+            execution_id (str): UUID único da execução.
+            table_name (str): Nome da tabela processada (ex: 'fmp_balance_sheet').
+            rows_read (int): Quantidade de registros lidos da Landing Zone.
+            rows_written (int): Quantidade de registros salvos na Bronze.
+            started_at (pd.Timestamp): Timestamp UTC de início do processamento.
+            ended_at (pd.Timestamp): Timestamp UTC de conclusão.
+            status (str): Estado final da execução ('SUCCESS', 'WARNING', 'FAILED').
+            error_message (str | None): Mensagem de erro caso a execução falhe.
+        """
+        duration = max((ended_at - started_at).total_seconds(), 0.0)
+        log_entry = pd.DataFrame(
+            [
+                {
+                    "execution_id": execution_id,
+                    "table_name": table_name,
+                    "rows_read": int(rows_read),
+                    "rows_written": int(rows_written),
+                    "started_at": started_at,
+                    "ended_at": ended_at,
+                    "duration_seconds": float(duration),
+                    "status": status,
+                    "error_message": error_message or "",
+                }
+            ]
+        )
+
+        time_partitioning = bigquery.TimePartitioning(
+            type_=bigquery.TimePartitioningType.DAY,
+            field="started_at",
+        )
+
+        try:
+            self.bq.upload_dataframe(
+                dataframe=log_entry,
+                dataset_id=self.dataset_id,
+                table_id="_pipeline_execution_logs",
+                write_disposition="WRITE_APPEND",
+                time_partitioning=time_partitioning,
+                clustering_fields=["status", "table_name"],
+            )
+            logger.info(
+                f"Métrica de observabilidade gravada em '{self.dataset_id}._pipeline_execution_logs' "
+                f"[{table_name}: {status}]"
+            )
+        except Exception as e:
+            logger.warning(f"Não foi possível gravar o log de observabilidade no BigQuery: {e}")
+
     def process_landing_to_bronze_sql(
         self,
         tables: list[str] | None = None,
@@ -113,10 +176,34 @@ class BronzeService:
         )
 
         for table_id in tables:
+            started_at = pd.Timestamp.now(tz="UTC")
+            bronze_table_name = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
+            rows_read = 0
+            rows_written = 0
+
             try:
                 landing_table_ref = f"`{self.bq.project_id}.{settings.LANDING}.{table_id}`"
-                bronze_table_name = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
                 bronze_table_ref = f"`{self.bq.project_id}.{self.dataset_id}.{bronze_table_name}`"
+
+                # Obtém a contagem de registros na Landing Zone
+                count_query = f"SELECT COUNT(1) as cnt FROM {landing_table_ref}"
+                count_result = list(self.bq.client.query(count_query).result())
+                rows_read = count_result[0]["cnt"] if count_result else 0
+
+                if rows_read == 0:
+                    ended_at = pd.Timestamp.now(tz="UTC")
+                    logger.warning(f"Tabela 'landing.{table_id}' está vazia. Promoção omitida.")
+                    self.log_execution_metric(
+                        execution_id=exec_id,
+                        table_name=bronze_table_name,
+                        rows_read=0,
+                        rows_written=0,
+                        started_at=started_at,
+                        ended_at=ended_at,
+                        status="WARNING",
+                        error_message="Tabela de origem Landing vazia.",
+                    )
+                    continue
 
                 # 1. Garante a existência da tabela Bronze com DDL particionado e clusterizado caso não exista
                 create_ddl = f"""
@@ -152,43 +239,98 @@ class BronzeService:
                 )
                 query_job = self.bq.client.query(insert_sql, job_config=job_config)
                 query_job.result()  # Aguarda a conclusão do job SQL no BigQuery
+                ended_at = pd.Timestamp.now(tz="UTC")
+                rows_written = query_job.num_dml_affected_rows or rows_read
 
                 logger.info(
-                    f"Promoção SQL-to-SQL concluída para '{bronze_table_ref}'. "
-                    f"Linhas inseridas: {query_job.num_dml_affected_rows}"
+                    f"Promoção SQL-to-SQL concluída para '{bronze_table_ref}'. Linhas inseridas: {rows_written}"
+                )
+
+                self.log_execution_metric(
+                    execution_id=exec_id,
+                    table_name=bronze_table_name,
+                    rows_read=rows_read,
+                    rows_written=rows_written,
+                    started_at=started_at,
+                    ended_at=ended_at,
+                    status="SUCCESS",
                 )
 
             except Exception as e:
+                ended_at = pd.Timestamp.now(tz="UTC")
                 if "billingNotEnabled" in str(e) or "DML queries" in str(e):
                     logger.info(
                         f"DML direto requer conta de faturamento (Billing) no GCP. "
                         f"Usando promoção via LoadJob para '{table_id}' [Modo Sandbox/Free Tier OK]..."
                     )
-                    self._fallback_load_landing_to_bronze(table_id, source, exec_id)
+                    self._fallback_load_landing_to_bronze(
+                        table_id, source, exec_id, started_at=started_at, rows_read=rows_read
+                    )
                 else:
                     logger.error(f"Erro na promoção de '{table_id}' para a camada Bronze: {e}")
+                    self.log_execution_metric(
+                        execution_id=exec_id,
+                        table_name=bronze_table_name,
+                        rows_read=rows_read,
+                        rows_written=0,
+                        started_at=started_at,
+                        ended_at=ended_at,
+                        status="FAILED",
+                        error_message=str(e),
+                    )
 
     def _fallback_load_landing_to_bronze(
-        self, table_id: str, source: str = "landing_zone", execution_id: str | None = None
+        self,
+        table_id: str,
+        source: str = "landing_zone",
+        execution_id: str | None = None,
+        started_at: pd.Timestamp | None = None,
+        rows_read: int = 0,
     ) -> None:
         """
         Método de fallback via BigQuery LoadJob para contas GCP sem Faturamento ativado (Free Tier/Sandbox).
         """
+        start = started_at or pd.Timestamp.now(tz="UTC")
         table_ref = f"{self.bq.project_id}.{settings.LANDING}.{table_id}"
         query = f"SELECT * FROM `{table_ref}`"
         df_landing = self.bq.client.query(query).to_dataframe()
 
+        bronze_table_id = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
+
         if df_landing.empty:
+            ended_at = pd.Timestamp.now(tz="UTC")
             logger.warning(f"Tabela 'landing.{table_id}' está vazia. Promoção para Bronze omitida.")
+            self.log_execution_metric(
+                execution_id=execution_id or str(uuid.uuid4()),
+                table_name=bronze_table_id,
+                rows_read=0,
+                rows_written=0,
+                started_at=start,
+                ended_at=ended_at,
+                status="WARNING",
+                error_message="Tabela de origem Landing vazia.",
+            )
             return
 
-        bronze_table_id = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
+        rows_written = len(df_landing)
+        read_cnt = rows_read if rows_read > 0 else rows_written
 
         self.load_dataframe_to_bronze(
             dataframe=df_landing,
             table_id=bronze_table_id,
             source=source,
             execution_id=execution_id,
+        )
+        ended_at = pd.Timestamp.now(tz="UTC")
+
+        self.log_execution_metric(
+            execution_id=execution_id or str(uuid.uuid4()),
+            table_name=bronze_table_id,
+            rows_read=read_cnt,
+            rows_written=rows_written,
+            started_at=start,
+            ended_at=ended_at,
+            status="SUCCESS",
         )
 
     def process_landing_to_bronze(
