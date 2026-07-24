@@ -83,15 +83,17 @@ class BronzeService:
 
         logger.info(f"Carga na camada Bronze para '{self.dataset_id}.{table_id}' concluída com sucesso.")
 
-    def process_landing_to_bronze(
+    def process_landing_to_bronze_sql(
         self,
         tables: list[str] | None = None,
         source: str = "landing_zone",
         execution_id: str | None = None,
     ) -> None:
         """
-        Lê todas as tabelas (ou tabelas específicas) da camada Landing, adiciona os campos
-        auditáveis (_ingested_at, _source, _execution_id) e as persiste na camada Bronze
+        Realiza a promoção direta SQL-to-SQL da camada Landing para a camada Bronze no BigQuery.
+
+        Sem tráfego de rede ou conversão em DataFrames Pandas na memória executora,
+        executando 100% nativamente dentro do engine de processamento do BigQuery
         com particionamento diário e clusterização por symbol.
 
         Args:
@@ -102,29 +104,101 @@ class BronzeService:
         if tables is None:
             tables = ["balance_sheet", "cash_flow", "company_profile", "income_statement", "quote"]
 
+        self.bq.create_dataset_if_not_exists(self.dataset_id)
         exec_id = execution_id or str(uuid.uuid4())
-        logger.info(f"Iniciando promoção de {len(tables)} tabelas de Landing -> Bronze [Execution ID: {exec_id}]")
+
+        logger.info(
+            f"Iniciando promoção direta SQL-to-SQL de {len(tables)} tabelas (Landing -> Bronze) "
+            f"[Execution ID: {exec_id}]"
+        )
 
         for table_id in tables:
             try:
-                table_ref = f"{self.bq.project_id}.{settings.LANDING}.{table_id}"
-                query = f"SELECT * FROM `{table_ref}`"
-                df_landing = self.bq.client.query(query).to_dataframe()
+                landing_table_ref = f"`{self.bq.project_id}.{settings.LANDING}.{table_id}`"
+                bronze_table_name = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
+                bronze_table_ref = f"`{self.bq.project_id}.{self.dataset_id}.{bronze_table_name}`"
 
-                if df_landing.empty:
-                    logger.warning(f"Tabela 'landing.{table_id}' está vazia. Promoção para Bronze omitida.")
-                    continue
+                # 1. Garante a existência da tabela Bronze com DDL particionado e clusterizado caso não exista
+                create_ddl = f"""
+                CREATE TABLE IF NOT EXISTS {bronze_table_ref}
+                PARTITION BY DATE(_ingested_at)
+                CLUSTER BY symbol
+                AS
+                SELECT
+                    *,
+                    CURRENT_TIMESTAMP() AS _ingested_at,
+                    CAST('' AS STRING) AS _source,
+                    CAST('' AS STRING) AS _execution_id
+                FROM {landing_table_ref}
+                WHERE 1=0;
+                """
+                self.bq.client.query(create_ddl).result()
 
-                bronze_table_id = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
+                # 2. Promove os dados diretamente via SQL INSERT INTO ... SELECT ...
+                insert_sql = f"""
+                INSERT INTO {bronze_table_ref}
+                SELECT
+                    *,
+                    CURRENT_TIMESTAMP() AS _ingested_at,
+                    @source AS _source,
+                    @execution_id AS _execution_id
+                FROM {landing_table_ref};
+                """
+                job_config = bigquery.QueryJobConfig(
+                    query_parameters=[
+                        bigquery.ScalarQueryParameter("source", "STRING", source),
+                        bigquery.ScalarQueryParameter("execution_id", "STRING", exec_id),
+                    ]
+                )
+                query_job = self.bq.client.query(insert_sql, job_config=job_config)
+                query_job.result()  # Aguarda a conclusão do job SQL no BigQuery
 
                 logger.info(
-                    f"Carregando {len(df_landing)} registros de 'landing.{table_id}' para 'bronze.{bronze_table_id}'..."
+                    f"Promoção SQL-to-SQL concluída para '{bronze_table_ref}'. "
+                    f"Linhas inseridas: {query_job.num_dml_affected_rows}"
                 )
-                self.load_dataframe_to_bronze(
-                    dataframe=df_landing,
-                    table_id=bronze_table_id,
-                    source=source,
-                    execution_id=exec_id,
-                )
+
             except Exception as e:
-                logger.error(f"Erro ao processar tabela 'landing.{table_id}' para a camada Bronze: {e}")
+                if "billingNotEnabled" in str(e) or "DML queries" in str(e):
+                    logger.info(
+                        f"DML direto requer conta de faturamento (Billing) no GCP. "
+                        f"Usando promoção via LoadJob para '{table_id}' [Modo Sandbox/Free Tier OK]..."
+                    )
+                    self._fallback_load_landing_to_bronze(table_id, source, exec_id)
+                else:
+                    logger.error(f"Erro na promoção de '{table_id}' para a camada Bronze: {e}")
+
+    def _fallback_load_landing_to_bronze(
+        self, table_id: str, source: str = "landing_zone", execution_id: str | None = None
+    ) -> None:
+        """
+        Método de fallback via BigQuery LoadJob para contas GCP sem Faturamento ativado (Free Tier/Sandbox).
+        """
+        table_ref = f"{self.bq.project_id}.{settings.LANDING}.{table_id}"
+        query = f"SELECT * FROM `{table_ref}`"
+        df_landing = self.bq.client.query(query).to_dataframe()
+
+        if df_landing.empty:
+            logger.warning(f"Tabela 'landing.{table_id}' está vazia. Promoção para Bronze omitida.")
+            return
+
+        bronze_table_id = f"fmp_{table_id}" if not table_id.startswith("fmp_") else table_id
+
+        self.load_dataframe_to_bronze(
+            dataframe=df_landing,
+            table_id=bronze_table_id,
+            source=source,
+            execution_id=execution_id,
+        )
+
+    def process_landing_to_bronze(
+        self,
+        tables: list[str] | None = None,
+        source: str = "landing_zone",
+        execution_id: str | None = None,
+    ) -> None:
+        """
+        Interface padrão para promoção de Landing para Bronze.
+        Tenta utilizar promoção direta SQL-to-SQL e faz fallback automático para LoadJob caso o projeto esteja no Free Tier.
+        """
+        self.process_landing_to_bronze_sql(tables=tables, source=source, execution_id=execution_id)
