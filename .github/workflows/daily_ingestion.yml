@@ -33,8 +33,11 @@ jobs:
         run: |
           mkdir -p credenciais
           python -c "
-          import os, base64, json, ast
+          import os, base64, json, ast, sys
           raw = os.environ.get('GCP_SA_KEY', '').strip()
+          if not raw:
+              print('ERRO CRÍTICO: Secret GCP_SA_KEY está VAZIO no GitHub Secrets!', file=sys.stderr)
+              sys.exit(1)
           parsed = None
           try:
               parsed = json.loads(raw)
@@ -42,7 +45,14 @@ jobs:
               try:
                   parsed = json.loads(base64.b64decode(raw).decode('utf-8'))
               except Exception:
-                  parsed = ast.literal_eval(raw)
+                  try:
+                      parsed = ast.literal_eval(raw)
+                  except Exception as err:
+                      print(f'ERRO AO DECODIFICAR GCP_SA_KEY: {err}', file=sys.stderr)
+                      sys.exit(1)
+          if not isinstance(parsed, dict) or 'type' not in parsed:
+              print('ERRO CRÍTICO: Estrutura inválida na chave GCP_SA_KEY!', file=sys.stderr)
+              sys.exit(1)
           with open('credenciais/chave_conta_servico.json', 'w') as f:
               json.dump(parsed, f, indent=2)
           print('Credencial GCP salva com sucesso! Projeto:', parsed.get('project_id'))
