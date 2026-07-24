@@ -6,6 +6,14 @@ from src.connectors import FinancialModelingPrep
 from src.warehouse.bigquery_client import BigQueryClient
 from src.core.config import settings
 from src.core.logger import logger
+from src.schemas import (
+    IncomeStatementSchema,
+    BalanceSheetSchema,
+    CashFlowSchema,
+    CompanyProfileSchema,
+    QuoteSchema,
+    validate_dataframe,
+)
 
 
 DEFAULT_BATCH_24_SYMBOLS = [
@@ -120,8 +128,8 @@ class IngestionService:
 
     def _upload_combined(self, df_list: List[pd.DataFrame], table_id: str) -> None:
         """
-        Concatena os DataFrames de cada símbolo, adiciona a coluna de auditoria ingested_at
-        e faz o upload para a tabela Landing correspondente.
+        Concatena os DataFrames de cada símbolo, valida o contrato com Pydantic,
+        adiciona a coluna de auditoria ingested_at e faz o upload para a tabela Landing.
         """
         if not df_list:
             logger.warning(f"Nenhum dado encontrado para a tabela '{table_id}'. Carga omitida.")
@@ -131,7 +139,19 @@ class IngestionService:
         # Adiciona a data/hora UTC do lote de ingestão para auditoria
         combined_df["ingested_at"] = pd.Timestamp.now(tz="UTC")
 
-        logger.info(f"Carregando {len(combined_df)} registros (com 'ingested_at') na tabela 'landing.{table_id}'...")
+        # Validação de Contrato de Dados com Pydantic
+        schema_map = {
+            "quote": QuoteSchema,
+            "company_profile": CompanyProfileSchema,
+            "income_statement": IncomeStatementSchema,
+            "balance_sheet": BalanceSheetSchema,
+            "cash_flow": CashFlowSchema,
+        }
+        schema_cls = schema_map.get(table_id)
+        if schema_cls:
+            combined_df = validate_dataframe(combined_df, schema_cls)
+
+        logger.info(f"Carregando {len(combined_df)} registros validados (com 'ingested_at') na tabela 'landing.{table_id}'...")
 
         self.bq.upload_dataframe(
             dataframe=combined_df,

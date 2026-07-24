@@ -36,10 +36,9 @@ Para elevar o nível da solução de um protótipo avançado para um **Pipeline 
   - `BigQueryUploadError`: Falhas durante a carga de dados no BigQuery.
 - **Benefício**: Isolamento de falhas e rastreabilidade precisa da causa raiz dos problemas no pipeline.
 
-### 2.3. Validação de Schemas de Dados (Pydantic / Pandera)
-- **Situação Atual**: Dados trafegam diretamente em objetos `pandas.DataFrame`.
-- **Melhoria Proposta**: Adicionar camada de validação de contrato antes do upload para o BigQuery.
-- **Benefício**: Garante que colunas críticas (como `symbol`, `date`, `revenue`) nunca cheguem nulas ou com tipos divergentes do contrato esperado.
+### 2.3. Validação de Schemas de Dados (Pydantic / Pandera) - 🟢 Concluído
+- **Status**: Implementado em `src/schemas/financial_schemas.py` e integrado ao `IngestionService`.
+- **Benefício**: Garante que colunas críticas (como `symbol`, `date`, `revenue`) nunca cheguem nulas ou com tipos divergentes do contrato esperado antes do upload no BigQuery.
 
 ### 2.4. Qualidade e Padronização de Código (Linting & Formatting)
 - **Situação Atual**: Formatação manual do código Python.
