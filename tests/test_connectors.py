@@ -26,22 +26,30 @@ def test_fmp_connector():
     print("\n--- Testando Profile ---")
     df_profile = fmp.get_company_profile()
     assert not df_profile.empty, "DataFrame de Profile não deve estar vazio"
-    print(f"Profile retornado ({len(df_profile)} linhas): {df_profile.columns.tolist()[:5]}")
+    print(f"Profile retornado ({len(df_profile)} linhas):")
+    cols_profile = [c for c in ["symbol", "companyName", "price", "industry", "sector"] if c in df_profile.columns]
+    print(df_profile[cols_profile if cols_profile else df_profile.columns[:5]].to_string(index=False))
 
     print("\n--- Testando Income Statement ---")
     df_income = fmp.get_income_statement(limit=2)
     assert not df_income.empty, "DataFrame de Income Statement não deve estar vazio"
-    print(f"Income Statement retornado ({len(df_income)} linhas)")
+    print(f"Income Statement retornado ({len(df_income)} linhas):")
+    cols_income = [c for c in ["date", "symbol", "revenue", "grossProfit", "netIncome"] if c in df_income.columns]
+    print(df_income[cols_income if cols_income else df_income.columns[:5]].to_string(index=False))
 
     print("\n--- Testando Balance Sheet ---")
     df_balance = fmp.get_balance_sheet(limit=2)
     assert not df_balance.empty, "DataFrame de Balance Sheet não deve estar vazio"
-    print(f"Balance Sheet retornado ({len(df_balance)} linhas)")
+    print(f"Balance Sheet retornado ({len(df_balance)} linhas):")
+    cols_balance = [c for c in ["date", "symbol", "totalAssets", "totalLiabilities", "totalStockholdersEquity"] if c in df_balance.columns]
+    print(df_balance[cols_balance if cols_balance else df_balance.columns[:5]].to_string(index=False))
 
     print("\n--- Testando Cash Flow ---")
     df_cash = fmp.get_cash_flow(limit=2)
     assert not df_cash.empty, "DataFrame de Cash Flow não deve estar vazio"
-    print(f"Cash Flow retornado ({len(df_cash)} linhas)")
+    print(f"Cash Flow retornado ({len(df_cash)} linhas):")
+    cols_cash = [c for c in ["date", "symbol", "netIncome", "operatingCashFlow", "freeCashFlow"] if c in df_cash.columns]
+    print(df_cash[cols_cash if cols_cash else df_cash.columns[:5]].to_string(index=False))
 
     print("\nTodos os métodos do conector FMP funcionaram com sucesso!")
 
