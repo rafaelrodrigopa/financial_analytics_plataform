@@ -1,0 +1,68 @@
+config {
+  type: "table",
+  schema: "gold",
+  name: "dim_date",
+  tags: ["gold", "dimensions"],
+  bigquery: {
+    clusterBy: ["ano", "trimestre", "mes"]
+  },
+  assertions: {
+    uniqueKey: ["data_ref"],
+    nonNull: ["data_ref", "ano", "mes"]
+  },
+  description: "Dimensão calendário temporal nativa para suporte a inteligência temporal no PowerBI e Looker Studio.",
+  columns: {
+    data_ref: "Data de referência do calendário (chave primária tipo DATE).",
+    ano: "Ano numérico (ex: 2024).",
+    trimestre: "Número do trimestre no ano (1, 2, 3 ou 4).",
+    trimestre_nome: "Nome/Rótulo do trimestre (ex: 'Q1', 'Q2').",
+    mes: "Número do mês (1 a 12).",
+    mes_nome: "Nome em português do mês (ex: 'Janeiro', 'Fevereiro').",
+    dia: "Dia do mês (1 a 31).",
+    dia_semana: "Número do dia da semana (1 = Domingo, 7 = Sábado).",
+    dia_semana_nome: "Nome em português do dia da semana (ex: 'Segunda-feira').",
+    eh_fim_de_semana: "Booleano indicando se a data é fim de semana (TRUE/FALSE)."
+  }
+}
+
+WITH date_array AS (
+  SELECT
+    datum AS data_ref
+  FROM
+    UNNEST(GENERATE_DATE_ARRAY(DATE('2010-01-01'), DATE('2030-12-31'), INTERVAL 1 DAY)) AS datum
+)
+
+SELECT
+  data_ref,
+  EXTRACT(YEAR FROM data_ref) AS ano,
+  EXTRACT(QUARTER FROM data_ref) AS trimestre,
+  CONCAT('Q', CAST(EXTRACT(QUARTER FROM data_ref) AS STRING)) AS trimestre_nome,
+  EXTRACT(MONTH FROM data_ref) AS mes,
+  CASE EXTRACT(MONTH FROM data_ref)
+    WHEN 1 THEN 'Janeiro'
+    WHEN 2 THEN 'Fevereiro'
+    WHEN 3 THEN 'Março'
+    WHEN 4 THEN 'Abril'
+    WHEN 5 THEN 'Maio'
+    WHEN 6 THEN 'Junho'
+    WHEN 7 THEN 'Julho'
+    WHEN 8 THEN 'Agosto'
+    WHEN 9 THEN 'Setembro'
+    WHEN 10 THEN 'Outubro'
+    WHEN 11 THEN 'Novembro'
+    WHEN 12 THEN 'Dezembro'
+  END AS mes_nome,
+  EXTRACT(DAY FROM data_ref) AS dia,
+  EXTRACT(DAYOFWEEK FROM data_ref) AS dia_semana,
+  CASE EXTRACT(DAYOFWEEK FROM data_ref)
+    WHEN 1 THEN 'Domingo'
+    WHEN 2 THEN 'Segunda-feira'
+    WHEN 3 THEN 'Terça-feira'
+    WHEN 4 THEN 'Quarta-feira'
+    WHEN 5 THEN 'Quinta-feira'
+    WHEN 6 THEN 'Sexta-feira'
+    WHEN 7 THEN 'Sábado'
+  END AS dia_semana_nome,
+  IF(EXTRACT(DAYOFWEEK FROM data_ref) IN (1, 7), TRUE, FALSE) AS eh_fim_de_semana
+FROM
+  date_array

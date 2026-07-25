@@ -1,0 +1,38 @@
+config {
+  type: "table",
+  schema: "gold",
+  name: "dim_company",
+  tags: ["gold", "dimensions", "daily"],
+  bigquery: {
+    clusterBy: ["codigo_ativo", "setor"]
+  },
+  assertions: {
+    uniqueKey: ["codigo_ativo"],
+    nonNull: ["codigo_ativo", "nome_empresa"]
+  },
+  description: "Dimensão corporativa de empresas em Português com dados cadastrais higienizados da bolsa.",
+  columns: {
+    codigo_ativo: "Código de negociação do ativo / Ação na bolsa (ex: AAPL, MSFT).",
+    nome_empresa: "Razão social ou nome comercial oficial da empresa.",
+    moeda: "Moeda oficial de negociação e reportes financeiros (ex: USD).",
+    bolsa: "Bolsa de valores onde o ativo é listado (ex: NASDAQ, NYSE).",
+    industria: "Indústria específica de atuação corporativa.",
+    setor: "Setor econômico macro de atuação da empresa.",
+    pais: "País de sede corporativa da empresa.",
+    valor_mercado: "Valor de Mercado (Market Cap) em moeda original.",
+    _ingested_at: "Timestamp da última atualização da dimensão."
+  }
+}
+
+SELECT
+  symbol AS codigo_ativo,
+  company_name AS nome_empresa,
+  currency AS moeda,
+  exchange AS bolsa,
+  industry AS industria,
+  sector AS setor,
+  country AS pais,
+  market_cap AS valor_mercado,
+  _ingested_at
+FROM
+  ${ref("dim_company_profile")}
