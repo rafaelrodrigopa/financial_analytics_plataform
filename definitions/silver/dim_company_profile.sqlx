@@ -2,7 +2,7 @@ config {
   type: "table",
   schema: "silver",
   name: "dim_company_profile",
-  tags: ["silver", "dimensions"],
+  tags: ["silver", "dimensions", "daily"],
   bigquery: {
     clusterBy: ["symbol", "sector"]
   },

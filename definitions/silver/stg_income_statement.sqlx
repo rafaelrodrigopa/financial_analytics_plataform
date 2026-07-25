@@ -2,7 +2,7 @@ config {
   type: "table",
   schema: "silver",
   name: "stg_income_statement",
-  tags: ["silver", "financial_statements"],
+  tags: ["silver", "financial_statements", "quarterly"],
   bigquery: {
     partitionBy: "date",
     clusterBy: ["symbol"]

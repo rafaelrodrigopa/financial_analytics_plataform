@@ -2,7 +2,7 @@ config {
   type: "assertion",
   schema: "silver",
   name: "assert_company_profile_valid_data",
-  tags: ["silver", "assertions", "dimensions"],
+  tags: ["silver", "assertions", "dimensions", "daily"],
   description: "Teste customizado de regra de negócio: garante que o valor de mercado (market_cap) seja não-negativo e que atributos cadastrais não sejam vazios."
 }
 

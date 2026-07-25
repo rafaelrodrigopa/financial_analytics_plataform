@@ -2,7 +2,7 @@ config {
   type: "assertion",
   schema: "silver",
   name: "assert_cash_flow_equation",
-  tags: ["silver", "assertions", "financial_statements"],
+  tags: ["silver", "assertions", "financial_statements", "quarterly"],
   description: "Teste customizado de regra de negócio: verifica se o Free Cash Flow (FCF) é consistente com Operating Cash Flow e Capital Expenditure."
 }
 

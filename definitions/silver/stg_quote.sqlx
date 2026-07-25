@@ -2,7 +2,7 @@ config {
   type: "table",
   schema: "silver",
   name: "stg_quote",
-  tags: ["silver", "quotes"],
+  tags: ["silver", "quotes", "intraday"],
   bigquery: {
     partitionBy: "DATE(_ingested_at)",
     clusterBy: ["symbol"]

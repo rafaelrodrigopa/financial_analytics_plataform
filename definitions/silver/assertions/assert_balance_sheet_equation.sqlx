@@ -2,7 +2,7 @@ config {
   type: "assertion",
   schema: "silver",
   name: "assert_balance_sheet_equation",
-  tags: ["silver", "assertions", "financial_statements"],
+  tags: ["silver", "assertions", "financial_statements", "quarterly"],
   description: "Teste customizado de regra de negócio: verifica se o Ativo Total é igual a soma do Passivo Total + Patrimônio Líquido no Balanço Patrimonial."
 }
 

@@ -2,7 +2,7 @@ config {
   type: "assertion",
   schema: "silver",
   name: "assert_income_statement_valid_amounts",
-  tags: ["silver", "assertions", "financial_statements"],
+  tags: ["silver", "assertions", "financial_statements", "quarterly"],
   description: "Teste customizado de regra de negócio: garante que métricas essenciais do DRE (ex: receita e lucro líquido) existam e não sejam nulas."
 }
 

@@ -2,7 +2,7 @@ config {
   type: "assertion",
   schema: "silver",
   name: "assert_quote_valid_price",
-  tags: ["silver", "assertions", "quotes"],
+  tags: ["silver", "assertions", "quotes", "intraday"],
   description: "Teste customizado de regra de negócio: garante que os preços e volumes de cotações sejam não-negativos."
 }
 
