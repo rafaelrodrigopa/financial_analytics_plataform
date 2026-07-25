@@ -1,0 +1,18 @@
+config {
+  type: "assertion",
+  schema: "silver",
+  name: "assert_quote_valid_price",
+  tags: ["silver", "assertions", "quotes"],
+  description: "Teste customizado de regra de negócio: garante que os preços e volumes de cotações sejam não-negativos."
+}
+
+SELECT
+  symbol,
+  price,
+  volume,
+  _ingested_at
+FROM
+  ${ref("stg_quote")}
+WHERE
+  price < 0
+  OR volume < 0

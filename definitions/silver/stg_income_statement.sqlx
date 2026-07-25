@@ -7,7 +7,10 @@ config {
     partitionBy: "date",
     clusterBy: ["symbol"]
   },
-
+  assertions: {
+    uniqueKey: ["symbol", "date", "period"],
+    nonNull: ["symbol", "date", "period"]
+  },
   description: "Demonstrativo limpo, padronizado e desduplicado do DRE (Income Statement)."
 }
 

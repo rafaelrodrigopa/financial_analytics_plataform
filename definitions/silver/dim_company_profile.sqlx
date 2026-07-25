@@ -6,6 +6,10 @@ config {
   bigquery: {
     clusterBy: ["symbol", "sector"]
   },
+  assertions: {
+    uniqueKey: ["symbol"],
+    nonNull: ["symbol", "company_name"]
+  },
   description: "Dimensão higienizada e desduplicada do Perfil Corporativo das empresas."
 }
 

@@ -7,6 +7,10 @@ config {
     partitionBy: "DATE(_ingested_at)",
     clusterBy: ["symbol"]
   },
+  assertions: {
+    uniqueKey: ["symbol", "_ingested_at"],
+    nonNull: ["symbol", "price", "_ingested_at"]
+  },
   description: "Cotações em tempo real desduplicadas e limpas."
 }
 

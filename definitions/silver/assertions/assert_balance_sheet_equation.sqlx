@@ -1,0 +1,23 @@
+config {
+  type: "assertion",
+  schema: "silver",
+  name: "assert_balance_sheet_equation",
+  tags: ["silver", "assertions", "financial_statements"],
+  description: "Teste customizado de regra de negócio: verifica se o Ativo Total é igual a soma do Passivo Total + Patrimônio Líquido no Balanço Patrimonial."
+}
+
+SELECT
+  symbol,
+  date,
+  period,
+  total_assets,
+  total_liabilities,
+  total_equity,
+  ABS(total_assets - (total_liabilities + total_equity)) AS difference
+FROM
+  ${ref("stg_balance_sheet")}
+WHERE
+  total_assets IS NOT NULL
+  AND total_liabilities IS NOT NULL
+  AND total_equity IS NOT NULL
+  AND ABS(total_assets - (total_liabilities + total_equity)) > 1.0
