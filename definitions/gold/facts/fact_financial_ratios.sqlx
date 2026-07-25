@@ -1,0 +1,44 @@
+config {
+  type: "table",
+  schema: "gold",
+  name: "fact_financial_ratios",
+  tags: ["gold", "facts", "ratios", "financial_indicators"],
+  bigquery: {
+    partitionBy: "DATE(_ingested_at)",
+    clusterBy: ["codigo_ativo", "periodo"]
+  },
+  assertions: {
+    uniqueKey: ["codigo_ativo", "data_referencia", "periodo"],
+    nonNull: ["codigo_ativo", "data_referencia", "periodo"]
+  },
+  description: "Fato de indicadores e índices financeiros calculados a partir dos demonstrativos consolidados.",
+  columns: {
+    codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
+    data_referencia: "Data de encerramento do período fiscal do demonstrativo.",
+    periodo: "Período fiscal do demonstrativo (ex: FY, Q1, Q2, Q3, Q4).",
+    ano_fiscal: "Ano fiscal correspondente ao demonstrativo.",
+    margem_bruta: "Margem Bruta em percentual (%): (Lucro Bruto / Receita Líquida) * 100.",
+    margem_operacional: "Margem Operacional em percentual (%): (Lucro Operacional / Receita Líquida) * 100.",
+    margem_liquida: "Margem Líquida em percentual (%): (Lucro Líquido / Receita Líquida) * 100.",
+    roe: "Retorno sobre o Patrimônio Líquido - ROE em percentual (%): (Lucro Líquido / Patrimônio Líquido) * 100.",
+    conversao_caixa: "Taxa de Conversão de Caixa em percentual (%): (Fluxo de Caixa Livre / Lucro Líquido) * 100.",
+    _ingested_at: "Timestamp da última atualização dos dados."
+  }
+}
+
+SELECT
+  codigo_ativo,
+  data_referencia,
+  periodo,
+  ano_fiscal,
+
+  -- Índices e Margens Financeiras (%)
+  SAFE_DIVIDE(lucro_bruto, receita_liquida) * 100 AS margem_bruta,
+  SAFE_DIVIDE(lucro_operacional, receita_liquida) * 100 AS margem_operacional,
+  SAFE_DIVIDE(lucro_liquido, receita_liquida) * 100 AS margem_liquida,
+  SAFE_DIVIDE(lucro_liquido, patrimonio_liquido) * 100 AS roe,
+  SAFE_DIVIDE(fluxo_caixa_livre, lucro_liquido) * 100 AS conversao_caixa,
+
+  _ingested_at
+FROM
+  ${ref("fact_financial_statements")}
