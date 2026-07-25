@@ -1,0 +1,18 @@
+config {
+  type: "assertion",
+  schema: "gold",
+  name: "assert_financial_statements_integrity",
+  tags: ["gold", "assertions", "financial_statements"],
+  description: "Valida a presença de chaves e métricas indispensáveis no fato de demonstrativos financeiros."
+}
+
+SELECT
+  codigo_ativo,
+  data_referencia,
+  periodo
+FROM
+  ${ref("fact_financial_statements")}
+WHERE
+  codigo_ativo IS NULL
+  OR data_referencia IS NULL
+  OR periodo IS NULL

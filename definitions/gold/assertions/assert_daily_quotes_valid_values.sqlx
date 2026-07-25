@@ -1,0 +1,21 @@
+config {
+  type: "assertion",
+  schema: "gold",
+  name: "assert_daily_quotes_valid_values",
+  tags: ["gold", "assertions", "quotes"],
+  description: "Valida a integridade das cotações em fact_daily_quotes: preços não-negativos e preço mínimo menor ou igual ao preço máximo do dia."
+}
+
+SELECT
+  codigo_ativo,
+  data_ingestao,
+  preco_atual,
+  preco_minimo_dia,
+  preco_maximo_dia,
+  volume_negociado
+FROM
+  ${ref("fact_daily_quotes")}
+WHERE
+  preco_atual < 0
+  OR volume_negociado < 0
+  OR (preco_minimo_dia IS NOT NULL AND preco_maximo_dia IS NOT NULL AND preco_minimo_dia > preco_maximo_dia)

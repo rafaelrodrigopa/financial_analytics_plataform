@@ -1,0 +1,23 @@
+config {
+  type: "assertion",
+  schema: "gold",
+  name: "assert_ratios_valid_range",
+  tags: ["gold", "assertions", "ratios"],
+  description: "Valida se os índices e margens calculados na tabela fact_financial_ratios estão dentro de limites plausíveis (-1000% a +1000%)."
+}
+
+SELECT
+  codigo_ativo,
+  data_referencia,
+  periodo,
+  margem_bruta,
+  margem_operacional,
+  margem_liquida,
+  roe
+FROM
+  ${ref("fact_financial_ratios")}
+WHERE
+  (margem_bruta IS NOT NULL AND (margem_bruta < -1000 OR margem_bruta > 1000))
+  OR (margem_operacional IS NOT NULL AND (margem_operacional < -1000 OR margem_operacional > 1000))
+  OR (margem_liquida IS NOT NULL AND (margem_liquida < -1000 OR margem_liquida > 1000))
+  OR (roe IS NOT NULL AND (roe < -1000 OR roe > 1000))
