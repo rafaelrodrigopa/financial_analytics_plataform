@@ -1,0 +1,29 @@
+config {
+  type: "table",
+  schema: "silver",
+  name: "dim_company_profile",
+  tags: ["silver", "dimensions"],
+  bigquery: {
+    clusterBy: ["symbol", "sector"]
+  },
+  description: "Dimensão higienizada e desduplicada do Perfil Corporativo das empresas."
+}
+
+SELECT
+  CAST(symbol AS STRING) AS symbol,
+  CAST(companyName AS STRING) AS company_name,
+  CAST(currency AS STRING) AS currency,
+  CAST(exchange AS STRING) AS exchange,
+  CAST(industry AS STRING) AS industry,
+  CAST(sector AS STRING) AS sector,
+  CAST(country AS STRING) AS country,
+  CAST(marketCap AS NUMERIC) AS market_cap,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
+
+  CAST(_source AS STRING) AS _source,
+  CAST(_execution_id AS STRING) AS _execution_id,
+  CAST(_row_hash AS STRING) AS _row_hash,
+  _raw_payload
+FROM
+  ${ref("fmp_company_profile")}
+QUALIFY ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY _ingested_at DESC) = 1

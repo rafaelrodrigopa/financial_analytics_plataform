@@ -1,0 +1,32 @@
+config {
+  type: "table",
+  schema: "silver",
+  name: "stg_quote",
+  tags: ["silver", "quotes"],
+  bigquery: {
+    partitionBy: "DATE(_ingested_at)",
+    clusterBy: ["symbol"]
+  },
+  description: "Cotações em tempo real desduplicadas e limpas."
+}
+
+SELECT
+  CAST(symbol AS STRING) AS symbol,
+  CAST(price AS NUMERIC) AS price,
+  CAST(changePercentage AS FLOAT64) AS change_percent,
+
+  CAST(change AS NUMERIC) AS change_amount,
+  CAST(dayLow AS NUMERIC) AS day_low,
+  CAST(dayHigh AS NUMERIC) AS day_high,
+  CAST(yearHigh AS NUMERIC) AS year_high,
+  CAST(yearLow AS NUMERIC) AS year_low,
+  CAST(marketCap AS NUMERIC) AS market_cap,
+  CAST(volume AS INT64) AS volume,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
+  CAST(_source AS STRING) AS _source,
+  CAST(_execution_id AS STRING) AS _execution_id,
+  CAST(_row_hash AS STRING) AS _row_hash,
+  _raw_payload
+FROM
+  ${ref("fmp_quote")}
+QUALIFY ROW_NUMBER() OVER (PARTITION BY symbol, DATE(_ingested_at) ORDER BY _ingested_at DESC) = 1

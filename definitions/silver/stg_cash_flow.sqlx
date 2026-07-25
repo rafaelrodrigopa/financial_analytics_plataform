@@ -1,0 +1,31 @@
+config {
+  type: "table",
+  schema: "silver",
+  name: "stg_cash_flow",
+  tags: ["silver", "financial_statements"],
+  bigquery: {
+    partitionBy: "date",
+    clusterBy: ["symbol"]
+  },
+
+  description: "Demonstrativo limpo, padronizado e desduplicado do Fluxo de Caixa (Cash Flow Statement)."
+}
+
+SELECT
+  CAST(date AS DATE) AS date,
+  CAST(symbol AS STRING) AS symbol,
+  CAST(period AS STRING) AS period,
+  CAST(fiscalYear AS STRING) AS fiscal_year,
+  CAST(operatingCashFlow AS NUMERIC) AS operating_cash_flow,
+
+  CAST(capitalExpenditure AS NUMERIC) AS capital_expenditure,
+  CAST(freeCashFlow AS NUMERIC) AS free_cash_flow,
+  CAST(netChangeInCash AS NUMERIC) AS net_change_in_cash,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
+  CAST(_source AS STRING) AS _source,
+  CAST(_execution_id AS STRING) AS _execution_id,
+  CAST(_row_hash AS STRING) AS _row_hash,
+  _raw_payload
+FROM
+  ${ref("fmp_cash_flow")}
+QUALIFY ROW_NUMBER() OVER (PARTITION BY symbol, date, period ORDER BY _ingested_at DESC) = 1

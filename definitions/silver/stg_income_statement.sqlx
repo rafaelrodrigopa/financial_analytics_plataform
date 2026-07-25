@@ -1,0 +1,32 @@
+config {
+  type: "table",
+  schema: "silver",
+  name: "stg_income_statement",
+  tags: ["silver", "financial_statements"],
+  bigquery: {
+    partitionBy: "date",
+    clusterBy: ["symbol"]
+  },
+
+  description: "Demonstrativo limpo, padronizado e desduplicado do DRE (Income Statement)."
+}
+
+SELECT
+  CAST(date AS DATE) AS date,
+  CAST(symbol AS STRING) AS symbol,
+  CAST(period AS STRING) AS period,
+  CAST(fiscalYear AS STRING) AS fiscal_year,
+  CAST(revenue AS NUMERIC) AS revenue,
+
+  CAST(grossProfit AS NUMERIC) AS gross_profit,
+  CAST(operatingIncome AS NUMERIC) AS operating_income,
+  CAST(netIncome AS NUMERIC) AS net_income,
+  CAST(eps AS FLOAT64) AS eps,
+  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
+  CAST(_source AS STRING) AS _source,
+  CAST(_execution_id AS STRING) AS _execution_id,
+  CAST(_row_hash AS STRING) AS _row_hash,
+  _raw_payload
+FROM
+  ${ref("fmp_income_statement")}
+QUALIFY ROW_NUMBER() OVER (PARTITION BY symbol, date, period ORDER BY _ingested_at DESC) = 1
