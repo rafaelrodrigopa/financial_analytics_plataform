@@ -11,7 +11,23 @@ config {
     uniqueKey: ["symbol", "date", "period"],
     nonNull: ["symbol", "date", "period"]
   },
-  description: "Demonstrativo limpo, padronizado e desduplicado do DRE (Income Statement)."
+  description: "Demonstrativo limpo, padronizado e desduplicado do DRE (Income Statement).",
+  columns: {
+    date: "Data de encerramento do período fiscal do DRE.",
+    symbol: "Código de negociação do ativo na bolsa (ticker symbol, ex: AAPL).",
+    period: "Período fiscal do demonstrativo (ex: FY, Q1, Q2, Q3, Q4).",
+    fiscal_year: "Ano fiscal correspondente ao demonstrativo.",
+    revenue: "Receita Líquida Total de vendas no período.",
+    gross_profit: "Lucro Bruto (Receita menos Custo dos Produtos/Serviços Vendidos).",
+    operating_income: "Lucro Operacional (EBIT).",
+    net_income: "Lucro Líquido final apurado no período.",
+    eps: "Lucro por Ação (Earnings Per Share).",
+    _ingested_at: "Timestamp de ingestão do registro na camada Bronze.",
+    _source: "Origem do dado (ex: FMP_API).",
+    _execution_id: "Identificador único da execução da pipeline de ETL.",
+    _row_hash: "Hash MD5 da linha para controle de alteração e deduplicação.",
+    _raw_payload: "Payload JSON bruto original retornado pela API."
+  }
 }
 
 SELECT

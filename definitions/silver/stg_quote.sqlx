@@ -11,7 +11,24 @@ config {
     uniqueKey: ["symbol", "_ingested_at"],
     nonNull: ["symbol", "price", "_ingested_at"]
   },
-  description: "Cotações em tempo real desduplicadas e limpas."
+  description: "Cotações em tempo real desduplicadas e limpas.",
+  columns: {
+    symbol: "Código de negociação do ativo na bolsa (ticker symbol, ex: AAPL).",
+    price: "Preço atual de mercado do ativo.",
+    change_percent: "Variação percentual do preço no dia.",
+    change_amount: "Variação nominal do preço no dia.",
+    day_low: "Mínima do preço atingida no dia.",
+    day_high: "Máxima do preço atingida no dia.",
+    year_high: "Máxima do preço atingida nas últimas 52 semanas.",
+    year_low: "Mínima do preço atingida nas últimas 52 semanas.",
+    market_cap: "Capitalização de mercado (Valor de Mercado) atual do ativo.",
+    volume: "Volume total de ações negociadas no dia.",
+    _ingested_at: "Timestamp de ingestão da cotação na camada Bronze.",
+    _source: "Origem do dado (ex: FMP_API).",
+    _execution_id: "Identificador único da execução da pipeline de ETL.",
+    _row_hash: "Hash MD5 da linha para controle de alteração e deduplicação.",
+    _raw_payload: "Payload JSON bruto original retornado pela API."
+  }
 }
 
 SELECT

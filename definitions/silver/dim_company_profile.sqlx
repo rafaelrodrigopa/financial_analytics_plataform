@@ -10,7 +10,22 @@ config {
     uniqueKey: ["symbol"],
     nonNull: ["symbol", "company_name"]
   },
-  description: "Dimensão higienizada e desduplicada do Perfil Corporativo das empresas."
+  description: "Dimensão higienizada e desduplicada do Perfil Corporativo das empresas.",
+  columns: {
+    symbol: "Código de negociação do ativo na bolsa (ticker symbol, ex: AAPL).",
+    company_name: "Razão social / Nome oficial da empresa.",
+    currency: "Moeda padrão de negociação e reportes (ex: USD).",
+    exchange: "Bolsa de valores onde o ativo é negociado (ex: NASDAQ, NYSE).",
+    industry: "Indústria de atuação da empresa.",
+    sector: "Setor econômico da empresa (ex: Technology, Healthcare).",
+    country: "País de sede corporativa da empresa.",
+    market_cap: "Capitalização de mercado (Valor de Mercado) da empresa.",
+    _ingested_at: "Timestamp de ingestão do registro na camada Bronze.",
+    _source: "Origem do dado (ex: FMP_API).",
+    _execution_id: "Identificador único da execução da pipeline de ETL.",
+    _row_hash: "Hash MD5 da linha para controle de alteração e deduplicação.",
+    _raw_payload: "Payload JSON bruto original retornado pela API."
+  }
 }
 
 SELECT
