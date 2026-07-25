@@ -29,13 +29,13 @@ config {
 }
 
 SELECT
-  CAST(symbol AS STRING) AS symbol,
-  CAST(companyName AS STRING) AS company_name,
-  CAST(currency AS STRING) AS currency,
-  CAST(exchange AS STRING) AS exchange,
-  CAST(industry AS STRING) AS industry,
-  CAST(sector AS STRING) AS sector,
-  CAST(country AS STRING) AS country,
+  UPPER(TRIM(CAST(symbol AS STRING))) AS symbol,
+  NULLIF(TRIM(CAST(companyName AS STRING)), '') AS company_name,
+  NULLIF(TRIM(UPPER(CAST(currency AS STRING))), '') AS currency,
+  NULLIF(TRIM(UPPER(CAST(exchange AS STRING))), '') AS exchange,
+  NULLIF(TRIM(CAST(industry AS STRING)), '') AS industry,
+  NULLIF(TRIM(CAST(sector AS STRING)), '') AS sector,
+  NULLIF(TRIM(CAST(country AS STRING)), '') AS country,
   CAST(marketCap AS NUMERIC) AS market_cap,
   CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
 
@@ -45,4 +45,4 @@ SELECT
   _raw_payload
 FROM
   ${ref("fmp_company_profile")}
-QUALIFY ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY _ingested_at DESC) = 1
+QUALIFY ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(symbol)) ORDER BY _ingested_at DESC) = 1

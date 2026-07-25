@@ -46,6 +46,10 @@ Com a conclusão da estrutura inicial da Camada Silver (tabelas desduplicadas e 
   ```
 * **Benefício**: Redução drástica no volume de dados varridos no BigQuery durante atualizações contínuas de cotação em tempo real.
 
+> [!NOTE]
+> **Observação Arquitetural sobre o BigQuery Sandbox (Free Tier)**:
+> O BigQuery na camada gratuita (*Free Tier Sandbox* sem conta de faturamento ativada) bloqueia instruções **DML (`INSERT INTO`, `UPDATE`, `MERGE`)**. Como a materialização `type: "incremental"` do Dataform traduz as cargas em comandos `INSERT INTO`, ela requer um projeto com Billing ativado. No ambiente Sandbox gratuito, os modelos devem ser mantidos como `type: "table"` (que utilizam `CREATE OR REPLACE TABLE`), garantindo 100% de compatibilidade e execução sem erros.
+
 ### 📌 Melhoria 3: Higienização Avançada de Strings (`UPPER`, `TRIM`, `NULLIF`)
 * **Descrição**: Aplicar funções de sanitização para evitar inconsistências sutis decorrentes de espaços extras ou strings vazias enviadas pela API.
 * **Regras**:

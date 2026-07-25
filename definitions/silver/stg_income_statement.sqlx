@@ -32,9 +32,9 @@ config {
 
 SELECT
   CAST(date AS DATE) AS date,
-  CAST(symbol AS STRING) AS symbol,
-  CAST(period AS STRING) AS period,
-  CAST(fiscalYear AS STRING) AS fiscal_year,
+  UPPER(TRIM(CAST(symbol AS STRING))) AS symbol,
+  NULLIF(TRIM(CAST(period AS STRING)), '') AS period,
+  NULLIF(TRIM(CAST(fiscalYear AS STRING)), '') AS fiscal_year,
   CAST(revenue AS NUMERIC) AS revenue,
 
   CAST(grossProfit AS NUMERIC) AS gross_profit,
@@ -48,4 +48,4 @@ SELECT
   _raw_payload
 FROM
   ${ref("fmp_income_statement")}
-QUALIFY ROW_NUMBER() OVER (PARTITION BY symbol, date, period ORDER BY _ingested_at DESC) = 1
+QUALIFY ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(symbol)), date, NULLIF(TRIM(period), '') ORDER BY _ingested_at DESC) = 1

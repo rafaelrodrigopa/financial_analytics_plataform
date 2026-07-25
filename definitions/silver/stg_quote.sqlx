@@ -32,10 +32,9 @@ config {
 }
 
 SELECT
-  CAST(symbol AS STRING) AS symbol,
+  UPPER(TRIM(CAST(symbol AS STRING))) AS symbol,
   CAST(price AS NUMERIC) AS price,
   CAST(changePercentage AS FLOAT64) AS change_percent,
-
   CAST(change AS NUMERIC) AS change_amount,
   CAST(dayLow AS NUMERIC) AS day_low,
   CAST(dayHigh AS NUMERIC) AS day_high,
@@ -50,4 +49,4 @@ SELECT
   _raw_payload
 FROM
   ${ref("fmp_quote")}
-QUALIFY ROW_NUMBER() OVER (PARTITION BY symbol, DATE(_ingested_at) ORDER BY _ingested_at DESC) = 1
+QUALIFY ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(symbol)), DATE(_ingested_at) ORDER BY _ingested_at DESC) = 1
