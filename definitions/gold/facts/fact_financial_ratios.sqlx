@@ -11,7 +11,7 @@ config {
     uniqueKey: ["codigo_ativo", "data_referencia", "periodo"],
     nonNull: ["codigo_ativo", "data_referencia", "periodo"]
   },
-  description: "Fato de indicadores e índices financeiros calculados a partir dos demonstrativos consolidados.",
+  description: "Fato de indicadores, índices financeiros e métricas de crescimento (YoY e QoQ) calculados a partir dos demonstrativos consolidados.",
   columns: {
     codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
     data_referencia: "Data de encerramento do período fiscal do demonstrativo.",
@@ -22,9 +22,17 @@ config {
     margem_liquida: "Margem Líquida em percentual (%): (Lucro Líquido / Receita Líquida) * 100.",
     roe: "Retorno sobre o Patrimônio Líquido - ROE em percentual (%): (Lucro Líquido / Patrimônio Líquido) * 100.",
     conversao_caixa: "Taxa de Conversão de Caixa em percentual (%): (Fluxo de Caixa Livre / Lucro Líquido) * 100.",
+    crescimento_receita_yoy: "Crescimento percentual da Receita Líquida em relação ao mesmo trimestre do ano anterior (YoY %).",
+    crescimento_receita_qoq: "Crescimento percentual da Receita Líquida em relação ao trimestre imediatamente anterior (QoQ %).",
+    crescimento_lucro_yoy: "Crescimento percentual do Lucro Líquido em relação ao mesmo trimestre do ano anterior (YoY %).",
+    crescimento_lucro_qoq: "Crescimento percentual do Lucro Líquido em relação ao trimestre imediatamente anterior (QoQ %).",
     _ingested_at: "Timestamp da última atualização dos dados."
   }
 }
+
+WITH base AS (
+  SELECT * FROM ${ref("fact_financial_statements")}
+)
 
 SELECT
   codigo_ativo,
@@ -39,6 +47,27 @@ SELECT
   SAFE_DIVIDE(lucro_liquido, patrimonio_liquido) * 100 AS roe,
   SAFE_DIVIDE(fluxo_caixa_livre, lucro_liquido) * 100 AS conversao_caixa,
 
+  -- Indicadores de Crescimento Temporal (YoY e QoQ %)
+  SAFE_DIVIDE(
+    receita_liquida - LAG(receita_liquida, 4) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia),
+    ABS(LAG(receita_liquida, 4) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia))
+  ) * 100 AS crescimento_receita_yoy,
+
+  SAFE_DIVIDE(
+    receita_liquida - LAG(receita_liquida, 1) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia),
+    ABS(LAG(receita_liquida, 1) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia))
+  ) * 100 AS crescimento_receita_qoq,
+
+  SAFE_DIVIDE(
+    lucro_liquido - LAG(lucro_liquido, 4) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia),
+    ABS(LAG(lucro_liquido, 4) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia))
+  ) * 100 AS crescimento_lucro_yoy,
+
+  SAFE_DIVIDE(
+    lucro_liquido - LAG(lucro_liquido, 1) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia),
+    ABS(LAG(lucro_liquido, 1) OVER (PARTITION BY codigo_ativo ORDER BY data_referencia))
+  ) * 100 AS crescimento_lucro_qoq,
+
   _ingested_at
 FROM
-  ${ref("fact_financial_statements")}
+  base

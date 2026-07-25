@@ -11,7 +11,7 @@ config {
     uniqueKey: ["codigo_ativo", "data_referencia", "periodo"],
     nonNull: ["codigo_ativo", "data_referencia", "periodo"]
   },
-  description: "Data Mart desnormalizado de Valuation unificando cotações em tempo real, demonstrativos financeiros, indicadores de rentabilidade e cadastro de empresas para dashboards e BI.",
+  description: "Data Mart desnormalizado de Valuation unificando cotações em tempo real, demonstrativos financeiros, indicadores de rentabilidade e métricas de crescimento (YoY/QoQ) para dashboards e BI.",
   columns: {
     codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
     nome_empresa: "Razão social ou nome comercial oficial da empresa.",
@@ -36,6 +36,10 @@ config {
     margem_liquida: "Margem Líquida (%).",
     roe: "Retorno sobre Patrimônio Líquido - ROE (%).",
     conversao_caixa: "Taxa de Conversão de Caixa (%).",
+    crescimento_receita_yoy: "Crescimento da Receita Líquida Year-over-Year (YoY %).",
+    crescimento_receita_qoq: "Crescimento da Receita Líquida Quarter-over-Quarter (QoQ %).",
+    crescimento_lucro_yoy: "Crescimento do Lucro Líquido Year-over-Year (YoY %).",
+    crescimento_lucro_qoq: "Crescimento do Lucro Líquido Quarter-over-Quarter (QoQ %).",
     pl_ratio: "Índice P/L (Price to Earnings): Preço Atual / EPS.",
     pvp_ratio: "Índice P/VP (Price to Book Value): Valor de Mercado / Patrimônio Líquido.",
     ps_ratio: "Índice P/S (Price to Sales): Valor de Mercado / Receita Líquida.",
@@ -99,6 +103,12 @@ SELECT
   fr.margem_liquida,
   fr.roe,
   fr.conversao_caixa,
+
+  -- Crescimento Temporal (%)
+  fr.crescimento_receita_yoy,
+  fr.crescimento_receita_qoq,
+  fr.crescimento_lucro_yoy,
+  fr.crescimento_lucro_qoq,
 
   -- Múltiplos e Indicadores de Valuation Calculados
   SAFE_DIVIDE(q.preco_atual, fs.lucro_por_acao) AS pl_ratio,
