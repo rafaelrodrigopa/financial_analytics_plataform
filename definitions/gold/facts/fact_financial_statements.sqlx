@@ -11,7 +11,7 @@ config {
     uniqueKey: ["codigo_ativo", "data_referencia", "periodo"],
     nonNull: ["codigo_ativo", "data_referencia", "periodo"]
   },
-  description: "Fato consolidado de demonstrativos financeiros (DRE, Balanço Patrimonial e Fluxo de Caixa) unificados em português.",
+  description: "Fato consolidado de demonstrativos financeiros (DRE, Balanço Patrimonial e Fluxo de Caixa) unificados em português com flags de governança.",
   columns: {
     codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
     data_referencia: "Data de encerramento do período fiscal do demonstrativo.",
@@ -30,6 +30,9 @@ config {
     capex: "Investimentos em Bens de Capital - CapEx (Cash Flow).",
     fluxo_caixa_livre: "Fluxo de Caixa Livre gerado no período (Cash Flow).",
     variacao_liquida_caixa: "Variação Líquida no Saldo de Caixa no período (Cash Flow).",
+    eh_empresa_prejuizo: "Booleano indicando se a empresa reportou Lucro Líquido negativo (prejuízo) no período (TRUE/FALSE).",
+    eh_patrimonio_negativo: "Booleano indicando se o Patrimônio Líquido é negativo / passivo a descoberto (TRUE/FALSE).",
+    eh_caixa_liquido_positivo: "Booleano indicando se a empresa possui mais caixa do que dívidas / Dívida Líquida negativa (TRUE/FALSE).",
     _ingested_at: "Timestamp da última atualização da tabela."
   }
 }
@@ -68,6 +71,11 @@ SELECT
   cf.capital_expenditure AS capex,
   cf.free_cash_flow AS fluxo_caixa_livre,
   cf.net_change_in_cash AS variacao_liquida_caixa,
+
+  -- Flags de Governança e Alertas Financeiros
+  IF(inc.net_income < 0, TRUE, FALSE) AS eh_empresa_prejuizo,
+  IF(bs.total_equity < 0, TRUE, FALSE) AS eh_patrimonio_negativo,
+  IF(bs.net_debt < 0, TRUE, FALSE) AS eh_caixa_liquido_positivo,
 
   GREATEST(
     COALESCE(inc._ingested_at, TIMESTAMP('1970-01-01')),

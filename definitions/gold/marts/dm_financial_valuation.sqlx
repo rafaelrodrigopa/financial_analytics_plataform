@@ -11,7 +11,7 @@ config {
     uniqueKey: ["codigo_ativo", "data_referencia", "periodo"],
     nonNull: ["codigo_ativo", "data_referencia", "periodo"]
   },
-  description: "Data Mart desnormalizado de Valuation unificando cotações em tempo real, demonstrativos financeiros, indicadores de rentabilidade e métricas de crescimento (YoY/QoQ) para dashboards e BI.",
+  description: "Data Mart desnormalizado de Valuation unificando cotações em tempo real, demonstrativos financeiros, indicadores de rentabilidade, crescimento e flags de governança para dashboards e BI.",
   columns: {
     codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
     nome_empresa: "Razão social ou nome comercial oficial da empresa.",
@@ -40,6 +40,9 @@ config {
     crescimento_receita_qoq: "Crescimento da Receita Líquida Quarter-over-Quarter (QoQ %).",
     crescimento_lucro_yoy: "Crescimento do Lucro Líquido Year-over-Year (YoY %).",
     crescimento_lucro_qoq: "Crescimento do Lucro Líquido Quarter-over-Quarter (QoQ %).",
+    eh_empresa_prejuizo: "Booleano indicando se a empresa reportou prejuízo no período (TRUE/FALSE).",
+    eh_patrimonio_negativo: "Booleano indicando se o Patrimônio Líquido é negativo (TRUE/FALSE).",
+    eh_caixa_liquido_positivo: "Booleano indicando se a empresa possui caixa superior à dívida (TRUE/FALSE).",
     pl_ratio: "Índice P/L (Price to Earnings): Preço Atual / EPS.",
     pvp_ratio: "Índice P/VP (Price to Book Value): Valor de Mercado / Patrimônio Líquido.",
     ps_ratio: "Índice P/S (Price to Sales): Valor de Mercado / Receita Líquida.",
@@ -109,6 +112,11 @@ SELECT
   fr.crescimento_receita_qoq,
   fr.crescimento_lucro_yoy,
   fr.crescimento_lucro_qoq,
+
+  -- Flags de Governança e Alertas Financeiros
+  fs.eh_empresa_prejuizo,
+  fs.eh_patrimonio_negativo,
+  fs.eh_caixa_liquido_positivo,
 
   -- Múltiplos e Indicadores de Valuation Calculados
   SAFE_DIVIDE(q.preco_atual, fs.lucro_por_acao) AS pl_ratio,
