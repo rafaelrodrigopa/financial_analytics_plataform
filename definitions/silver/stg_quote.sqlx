@@ -42,11 +42,7 @@ SELECT
   CAST(yearLow AS NUMERIC) AS year_low,
   CAST(marketCap AS NUMERIC) AS market_cap,
   CAST(volume AS INT64) AS volume,
-  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
-  CAST(_source AS STRING) AS _source,
-  CAST(_execution_id AS STRING) AS _execution_id,
-  CAST(_row_hash AS STRING) AS _row_hash,
-  _raw_payload
+  ${audit_fields.selectAuditFields()}
 FROM
   ${ref("fmp_quote")}
 QUALIFY ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(symbol)), DATE(_ingested_at) ORDER BY _ingested_at DESC) = 1

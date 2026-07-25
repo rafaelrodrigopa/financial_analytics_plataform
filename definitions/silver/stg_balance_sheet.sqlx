@@ -39,11 +39,7 @@ SELECT
   CAST(totalLiabilities AS NUMERIC) AS total_liabilities,
   CAST(totalStockholdersEquity AS NUMERIC) AS total_equity,
   CAST(netDebt AS NUMERIC) AS net_debt,
-  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
-  CAST(_source AS STRING) AS _source,
-  CAST(_execution_id AS STRING) AS _execution_id,
-  CAST(_row_hash AS STRING) AS _row_hash,
-  _raw_payload
+  ${audit_fields.selectAuditFields()}
 FROM
   ${ref("fmp_balance_sheet")}
 QUALIFY ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(symbol)), date, NULLIF(TRIM(period), '') ORDER BY _ingested_at DESC) = 1

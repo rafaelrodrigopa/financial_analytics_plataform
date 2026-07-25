@@ -37,12 +37,7 @@ SELECT
   NULLIF(TRIM(CAST(sector AS STRING)), '') AS sector,
   NULLIF(TRIM(CAST(country AS STRING)), '') AS country,
   CAST(marketCap AS NUMERIC) AS market_cap,
-  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
-
-  CAST(_source AS STRING) AS _source,
-  CAST(_execution_id AS STRING) AS _execution_id,
-  CAST(_row_hash AS STRING) AS _row_hash,
-  _raw_payload
+  ${audit_fields.selectAuditFields()}
 FROM
   ${ref("fmp_company_profile")}
 QUALIFY ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(symbol)) ORDER BY _ingested_at DESC) = 1

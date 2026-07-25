@@ -41,11 +41,7 @@ SELECT
   CAST(operatingIncome AS NUMERIC) AS operating_income,
   CAST(netIncome AS NUMERIC) AS net_income,
   CAST(eps AS FLOAT64) AS eps,
-  CAST(_ingested_at AS TIMESTAMP) AS _ingested_at,
-  CAST(_source AS STRING) AS _source,
-  CAST(_execution_id AS STRING) AS _execution_id,
-  CAST(_row_hash AS STRING) AS _row_hash,
-  _raw_payload
+  ${audit_fields.selectAuditFields()}
 FROM
   ${ref("fmp_income_statement")}
 QUALIFY ROW_NUMBER() OVER (PARTITION BY UPPER(TRIM(symbol)), date, NULLIF(TRIM(period), '') ORDER BY _ingested_at DESC) = 1
