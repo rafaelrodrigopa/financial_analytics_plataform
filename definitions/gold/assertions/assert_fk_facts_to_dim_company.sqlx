@@ -1,0 +1,27 @@
+config {
+  type: "assertion",
+  schema: "gold",
+  name: "assert_fk_facts_to_dim_company",
+  tags: ["gold", "assertions", "integrity", "fk"],
+  description: "Garante que todo codigo_ativo presente nas tabelas fato (fact_financial_statements, fact_daily_quotes, fact_financial_ratios) exista na dimensão dim_company."
+}
+
+WITH all_fact_symbols AS (
+  SELECT codigo_ativo, 'fact_financial_statements' AS origem FROM ${ref("fact_financial_statements")}
+  UNION DISTINCT
+  SELECT codigo_ativo, 'fact_daily_quotes' AS origem FROM ${ref("fact_daily_quotes")}
+  UNION DISTINCT
+  SELECT codigo_ativo, 'fact_financial_ratios' AS origem FROM ${ref("fact_financial_ratios")}
+)
+
+SELECT
+  f.codigo_ativo,
+  f.origem
+FROM
+  all_fact_symbols f
+LEFT JOIN
+  ${ref("dim_company")} c
+  ON f.codigo_ativo = c.codigo_ativo
+WHERE
+  f.codigo_ativo IS NOT NULL
+  AND c.codigo_ativo IS NULL

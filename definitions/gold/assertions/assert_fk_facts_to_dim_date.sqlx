@@ -1,0 +1,25 @@
+config {
+  type: "assertion",
+  schema: "gold",
+  name: "assert_fk_facts_to_dim_date",
+  tags: ["gold", "assertions", "integrity", "fk"],
+  description: "Garante que toda data_referencia presente nas tabelas fato exista no calendário dim_date."
+}
+
+WITH all_fact_dates AS (
+  SELECT data_referencia, 'fact_financial_statements' AS origem FROM ${ref("fact_financial_statements")}
+  UNION DISTINCT
+  SELECT data_referencia, 'fact_financial_ratios' AS origem FROM ${ref("fact_financial_ratios")}
+)
+
+SELECT
+  f.data_referencia,
+  f.origem
+FROM
+  all_fact_dates f
+LEFT JOIN
+  ${ref("dim_date")} d
+  ON f.data_referencia = d.data_ref
+WHERE
+  f.data_referencia IS NOT NULL
+  AND d.data_ref IS NULL
