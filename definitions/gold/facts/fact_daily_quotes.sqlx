@@ -1,0 +1,45 @@
+config {
+  type: "table",
+  schema: "gold",
+  name: "fact_daily_quotes",
+  tags: ["gold", "facts", "quotes", "daily"],
+  bigquery: {
+    partitionBy: "data_ingestao",
+    clusterBy: ["codigo_ativo"]
+  },
+  assertions: {
+    uniqueKey: ["codigo_ativo", "data_ingestao"],
+    nonNull: ["codigo_ativo", "data_ingestao", "preco_atual"]
+  },
+  description: "Fato consolidado de cotações diárias e indicadores em tempo real traduzidos para o português.",
+  columns: {
+    codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
+    preco_atual: "Preço atual de mercado do ativo em moeda original.",
+    variacao_percentual: "Variação percentual do preço no dia.",
+    variacao_nominal: "Variação nominal do preço no dia.",
+    preco_minimo_dia: "Preço mínimo atingido no dia.",
+    preco_maximo_dia: "Preço máximo atingido no dia.",
+    preco_maximo_52sem: "Preço máximo atingido nas últimas 52 semanas.",
+    preco_minimo_52sem: "Preço mínimo atingido nas últimas 52 semanas.",
+    valor_mercado: "Capitalização de mercado (Valor de Mercado) em moeda original.",
+    volume_negociado: "Volume total de ações negociadas no dia.",
+    data_ingestao: "Data de ingestão da cotação (campo de particionamento).",
+    _ingested_at: "Timestamp completo da ingestão da cotação."
+  }
+}
+
+SELECT
+  symbol AS codigo_ativo,
+  price AS preco_atual,
+  change_percent AS variacao_percentual,
+  change_amount AS variacao_nominal,
+  day_low AS preco_minimo_dia,
+  day_high AS preco_maximo_dia,
+  year_high AS preco_maximo_52sem,
+  year_low AS preco_minimo_52sem,
+  market_cap AS valor_mercado,
+  volume AS volume_negociado,
+  DATE(_ingested_at) AS data_ingestao,
+  _ingested_at
+FROM
+  ${ref("stg_quote")}
