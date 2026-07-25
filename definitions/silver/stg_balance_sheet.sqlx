@@ -4,7 +4,7 @@ config {
   name: "stg_balance_sheet",
   tags: ["silver", "financial_statements", "quarterly"],
   bigquery: {
-    partitionBy: "date",
+    partitionBy: "DATE(_ingested_at)",
     clusterBy: ["symbol"]
   },
   assertions: {
@@ -37,7 +37,7 @@ SELECT
   CAST(totalAssets AS NUMERIC) AS total_assets,
 
   CAST(totalLiabilities AS NUMERIC) AS total_liabilities,
-  CAST(totalStockholdersEquity AS NUMERIC) AS total_equity,
+  CAST(COALESCE(totalEquity, totalStockholdersEquity) AS NUMERIC) AS total_equity,
   CAST(netDebt AS NUMERIC) AS net_debt,
   ${audit_fields.selectAuditFields()}
 FROM

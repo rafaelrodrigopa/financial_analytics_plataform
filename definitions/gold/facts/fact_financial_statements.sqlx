@@ -1,0 +1,85 @@
+config {
+  type: "table",
+  schema: "gold",
+  name: "fact_financial_statements",
+  tags: ["gold", "facts", "financial_statements", "quarterly"],
+  bigquery: {
+    partitionBy: "DATE(_ingested_at)",
+    clusterBy: ["codigo_ativo", "periodo"]
+  },
+  assertions: {
+    uniqueKey: ["codigo_ativo", "data_referencia", "periodo"],
+    nonNull: ["codigo_ativo", "data_referencia", "periodo"]
+  },
+  description: "Fato consolidado de demonstrativos financeiros (DRE, Balanço Patrimonial e Fluxo de Caixa) unificados em português.",
+  columns: {
+    codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
+    data_referencia: "Data de encerramento do período fiscal do demonstrativo.",
+    periodo: "Período fiscal do demonstrativo (ex: FY, Q1, Q2, Q3, Q4).",
+    ano_fiscal: "Ano fiscal correspondente ao demonstrativo.",
+    receita_liquida: "Receita Líquida Total no período (Income Statement).",
+    lucro_bruto: "Lucro Bruto no período (Income Statement).",
+    lucro_operacional: "Lucro Operacional - EBIT (Income Statement).",
+    lucro_liquido: "Lucro Líquido no período (Income Statement).",
+    lucro_por_acao: "Lucro por Ação - EPS (Income Statement).",
+    ativo_total: "Ativo Total da empresa no encerramento (Balance Sheet).",
+    passivo_total: "Passivo Total da empresa no encerramento (Balance Sheet).",
+    patrimonio_liquido: "Patrimônio Líquido Total pertencente aos acionistas (Balance Sheet).",
+    divida_liquida: "Dívida Líquida (Balance Sheet).",
+    fluxo_caixa_operacional: "Fluxo de Caixa Gerado pelas Atividades Operacionais (Cash Flow).",
+    capex: "Investimentos em Bens de Capital - CapEx (Cash Flow).",
+    fluxo_caixa_livre: "Fluxo de Caixa Livre gerado no período (Cash Flow).",
+    variacao_liquida_caixa: "Variação Líquida no Saldo de Caixa no período (Cash Flow).",
+    _ingested_at: "Timestamp da última atualização da tabela."
+  }
+}
+
+WITH inc AS (
+  SELECT * FROM ${ref("stg_income_statement")}
+),
+bs AS (
+  SELECT * FROM ${ref("stg_balance_sheet")}
+),
+cf AS (
+  SELECT * FROM ${ref("stg_cash_flow")}
+)
+
+SELECT
+  COALESCE(inc.symbol, bs.symbol, cf.symbol) AS codigo_ativo,
+  COALESCE(inc.date, bs.date, cf.date) AS data_referencia,
+  COALESCE(inc.period, bs.period, cf.period) AS periodo,
+  COALESCE(inc.fiscal_year, bs.fiscal_year, cf.fiscal_year) AS ano_fiscal,
+
+  -- Métricas do DRE (Income Statement)
+  inc.revenue AS receita_liquida,
+  inc.gross_profit AS lucro_bruto,
+  inc.operating_income AS lucro_operacional,
+  inc.net_income AS lucro_liquido,
+  inc.eps AS lucro_por_acao,
+
+  -- Métricas do Balanço Patrimonial (Balance Sheet)
+  bs.total_assets AS ativo_total,
+  bs.total_liabilities AS passivo_total,
+  bs.total_equity AS patrimonio_liquido,
+  bs.net_debt AS divida_liquida,
+
+  -- Métricas do Fluxo de Caixa (Cash Flow)
+  cf.operating_cash_flow AS fluxo_caixa_operacional,
+  cf.capital_expenditure AS capex,
+  cf.free_cash_flow AS fluxo_caixa_livre,
+  cf.net_change_in_cash AS variacao_liquida_caixa,
+
+  GREATEST(
+    COALESCE(inc._ingested_at, TIMESTAMP('1970-01-01')),
+    COALESCE(bs._ingested_at, TIMESTAMP('1970-01-01')),
+    COALESCE(cf._ingested_at, TIMESTAMP('1970-01-01'))
+  ) AS _ingested_at
+FROM inc
+FULL OUTER JOIN bs
+  ON inc.symbol = bs.symbol
+ AND inc.date = bs.date
+ AND inc.period = bs.period
+FULL OUTER JOIN cf
+  ON COALESCE(inc.symbol, bs.symbol) = cf.symbol
+ AND COALESCE(inc.date, bs.date) = cf.date
+ AND COALESCE(inc.period, bs.period) = cf.period

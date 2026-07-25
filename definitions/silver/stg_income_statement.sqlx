@@ -4,7 +4,7 @@ config {
   name: "stg_income_statement",
   tags: ["silver", "financial_statements", "quarterly"],
   bigquery: {
-    partitionBy: "date",
+    partitionBy: "DATE(_ingested_at)",
     clusterBy: ["symbol"]
   },
   assertions: {

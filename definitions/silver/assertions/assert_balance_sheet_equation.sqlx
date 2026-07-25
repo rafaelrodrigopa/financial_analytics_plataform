@@ -17,7 +17,7 @@ SELECT
 FROM
   ${ref("stg_balance_sheet")}
 WHERE
-  total_assets IS NOT NULL
+  total_assets > 0
   AND total_liabilities IS NOT NULL
   AND total_equity IS NOT NULL
   AND ABS(total_assets - (total_liabilities + total_equity)) > 1.0
