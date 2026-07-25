@@ -12,8 +12,7 @@ credenciais/
 # Internal Documentation & Specs
 documentacao.md
 specs/
-!docs/
-!docs/*.md
+docs/
 
 # CI/CD Workflows
 .github/
