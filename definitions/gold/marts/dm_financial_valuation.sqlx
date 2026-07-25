@@ -1,0 +1,124 @@
+config {
+  type: "table",
+  schema: "gold",
+  name: "dm_financial_valuation",
+  tags: ["gold", "marts", "valuation"],
+  bigquery: {
+    partitionBy: "DATE(_ingested_at)",
+    clusterBy: ["codigo_ativo", "setor"]
+  },
+  assertions: {
+    uniqueKey: ["codigo_ativo", "data_referencia", "periodo"],
+    nonNull: ["codigo_ativo", "data_referencia", "periodo"]
+  },
+  description: "Data Mart desnormalizado de Valuation unificando cotações em tempo real, demonstrativos financeiros, indicadores de rentabilidade e cadastro de empresas para dashboards e BI.",
+  columns: {
+    codigo_ativo: "Código de negociação do ativo na bolsa (ex: AAPL).",
+    nome_empresa: "Razão social ou nome comercial oficial da empresa.",
+    setor: "Setor econômico macro da empresa.",
+    industria: "Indústria específica de atuação.",
+    bolsa: "Bolsa de valores onde é negociado.",
+    moeda: "Moeda original dos demonstrativos.",
+    data_referencia: "Data de encerramento do período fiscal.",
+    periodo: "Período fiscal (ex: FY, Q1, Q2, Q3, Q4).",
+    ano_fiscal: "Ano fiscal correspondente.",
+    preco_atual: "Preço atual de mercado do ativo.",
+    valor_mercado: "Capitalização de mercado (Market Cap) atual.",
+    receita_liquida: "Receita Líquida Total no período.",
+    lucro_operacional: "Lucro Operacional (EBIT) no período.",
+    lucro_liquido: "Lucro Líquido Total no período.",
+    lucro_por_acao: "Lucro por Ação (EPS) no período.",
+    patrimonio_liquido: "Patrimônio Líquido Total.",
+    divida_liquida: "Dívida Líquida Total.",
+    fluxo_caixa_livre: "Fluxo de Caixa Livre no período.",
+    margem_bruta: "Margem Bruta (%).",
+    margem_operacional: "Margem Operacional (%).",
+    margem_liquida: "Margem Líquida (%).",
+    roe: "Retorno sobre Patrimônio Líquido - ROE (%).",
+    conversao_caixa: "Taxa de Conversão de Caixa (%).",
+    pl_ratio: "Índice P/L (Price to Earnings): Preço Atual / EPS.",
+    pvp_ratio: "Índice P/VP (Price to Book Value): Valor de Mercado / Patrimônio Líquido.",
+    ps_ratio: "Índice P/S (Price to Sales): Valor de Mercado / Receita Líquida.",
+    fcf_yield: "Rendimento do Fluxo de Caixa Livre - FCF Yield (%): (Fluxo de Caixa Livre / Valor de Mercado) * 100.",
+    ev_ebit: "Índice EV / EBIT: (Valor de Mercado + Dívida Líquida) / Lucro Operacional (EBIT).",
+    _ingested_at: "Timestamp da última atualização do Data Mart."
+  }
+}
+
+WITH fs AS (
+  SELECT * FROM ${ref("fact_financial_statements")}
+),
+fr AS (
+  SELECT * FROM ${ref("fact_financial_ratios")}
+),
+c AS (
+  SELECT * FROM ${ref("dim_company")}
+),
+q AS (
+  SELECT
+    codigo_ativo,
+    preco_atual,
+    valor_mercado,
+    variacao_percentual,
+    volume_negociado,
+    data_ingestao,
+    _ingested_at
+  FROM ${ref("fact_daily_quotes")}
+  QUALIFY ROW_NUMBER() OVER (PARTITION BY codigo_ativo ORDER BY _ingested_at DESC) = 1
+)
+
+SELECT
+  fs.codigo_ativo,
+  COALESCE(c.nome_empresa, fs.codigo_ativo) AS nome_empresa,
+  c.setor,
+  c.industria,
+  c.bolsa,
+  c.moeda,
+
+  -- Chaves Temporais
+  fs.data_referencia,
+  fs.periodo,
+  fs.ano_fiscal,
+
+  -- Cotação e Valor de Mercado Atual
+  q.preco_atual,
+  COALESCE(q.valor_mercado, c.valor_mercado) AS valor_mercado,
+
+  -- Métricas Financeiras Principais
+  fs.receita_liquida,
+  fs.lucro_operacional,
+  fs.lucro_liquido,
+  fs.lucro_por_acao,
+  fs.patrimonio_liquido,
+  fs.divida_liquida,
+  fs.fluxo_caixa_livre,
+
+  -- Margens e Indicadores (%)
+  fr.margem_bruta,
+  fr.margem_operacional,
+  fr.margem_liquida,
+  fr.roe,
+  fr.conversao_caixa,
+
+  -- Múltiplos e Indicadores de Valuation Calculados
+  SAFE_DIVIDE(q.preco_atual, fs.lucro_por_acao) AS pl_ratio,
+  SAFE_DIVIDE(COALESCE(q.valor_mercado, c.valor_mercado), fs.patrimonio_liquido) AS pvp_ratio,
+  SAFE_DIVIDE(COALESCE(q.valor_mercado, c.valor_mercado), fs.receita_liquida) AS ps_ratio,
+  SAFE_DIVIDE(fs.fluxo_caixa_livre, COALESCE(q.valor_mercado, c.valor_mercado)) * 100 AS fcf_yield,
+  SAFE_DIVIDE(COALESCE(q.valor_mercado, c.valor_mercado) + COALESCE(fs.divida_liquida, 0), fs.lucro_operacional) AS ev_ebit,
+
+  GREATEST(
+    COALESCE(fs._ingested_at, TIMESTAMP('1970-01-01')),
+    COALESCE(fr._ingested_at, TIMESTAMP('1970-01-01')),
+    COALESCE(q._ingested_at, TIMESTAMP('1970-01-01')),
+    COALESCE(c._ingested_at, TIMESTAMP('1970-01-01'))
+  ) AS _ingested_at
+FROM fs
+LEFT JOIN fr
+  ON fs.codigo_ativo = fr.codigo_ativo
+ AND fs.data_referencia = fr.data_referencia
+ AND fs.periodo = fr.periodo
+LEFT JOIN c
+  ON fs.codigo_ativo = c.codigo_ativo
+LEFT JOIN q
+  ON fs.codigo_ativo = q.codigo_ativo
