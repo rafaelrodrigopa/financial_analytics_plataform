@@ -1,0 +1,23 @@
+config {
+  type: "assertion",
+  schema: "silver",
+  name: "assert_cash_flow_equation",
+  tags: ["silver", "assertions", "financial_statements"],
+  description: "Teste customizado de regra de negócio: verifica se o Free Cash Flow (FCF) é consistente com Operating Cash Flow e Capital Expenditure."
+}
+
+SELECT
+  symbol,
+  date,
+  period,
+  operating_cash_flow,
+  capital_expenditure,
+  free_cash_flow,
+  ABS(free_cash_flow - (operating_cash_flow - ABS(capital_expenditure))) AS difference
+FROM
+  ${ref("stg_cash_flow")}
+WHERE
+  operating_cash_flow IS NOT NULL
+  AND capital_expenditure IS NOT NULL
+  AND free_cash_flow IS NOT NULL
+  AND ABS(free_cash_flow - (operating_cash_flow - ABS(capital_expenditure))) > 10.0

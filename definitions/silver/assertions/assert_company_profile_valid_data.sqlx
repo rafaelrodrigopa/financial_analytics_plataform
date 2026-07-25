@@ -1,0 +1,18 @@
+config {
+  type: "assertion",
+  schema: "silver",
+  name: "assert_company_profile_valid_data",
+  tags: ["silver", "assertions", "dimensions"],
+  description: "Teste customizado de regra de negócio: garante que o valor de mercado (market_cap) seja não-negativo e que atributos cadastrais não sejam vazios."
+}
+
+SELECT
+  symbol,
+  company_name,
+  market_cap
+FROM
+  ${ref("dim_company_profile")}
+WHERE
+  market_cap < 0
+  OR TRIM(symbol) = ''
+  OR TRIM(company_name) = ''

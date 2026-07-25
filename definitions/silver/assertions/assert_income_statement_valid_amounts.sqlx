@@ -1,0 +1,19 @@
+config {
+  type: "assertion",
+  schema: "silver",
+  name: "assert_income_statement_valid_amounts",
+  tags: ["silver", "assertions", "financial_statements"],
+  description: "Teste customizado de regra de negócio: garante que métricas essenciais do DRE (ex: receita e lucro líquido) existam e não sejam nulas."
+}
+
+SELECT
+  symbol,
+  date,
+  period,
+  revenue,
+  net_income
+FROM
+  ${ref("stg_income_statement")}
+WHERE
+  revenue IS NULL
+  OR net_income IS NULL
